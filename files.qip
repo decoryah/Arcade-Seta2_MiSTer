@@ -1,0 +1,31 @@
+set_global_assignment -name SYSTEMVERILOG_FILE Seta2.sv
+set_global_assignment -name SDC_FILE Seta2.sdc
+set_global_assignment -name QIP_FILE rtl/pll.qip
+set_global_assignment -name SEARCH_PATH rtl
+
+# the machine
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_cen.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_tmp68301.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_main.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_cache.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_eeprom.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_dpram.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_render.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_video.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_core.sv
+
+# MiSTer platform layer: the SDRAM, the DDR3, the loader
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_sdram.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_mem.sv
+
+# CRT Adjust: the glue, and rmonic79's line buffer (MiSTer-CRT-Adjust, GPL-3.0-or-later; modules/VENDOR.md)
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_crtadj.sv
+set_global_assignment -name SYSTEMVERILOG_FILE modules/crt_adjust/crt_adjust.sv
+
+# fx68k 68000 (GPL-3, Jorge Cwik); microrom.mem / nanorom.mem are read from the project directory
+set_global_assignment -name SYSTEMVERILOG_FILE modules/cpu-fx68k/fx68kAlu.sv
+set_global_assignment -name SYSTEMVERILOG_FILE modules/cpu-fx68k/uaddrPla.sv
+set_global_assignment -name SYSTEMVERILOG_FILE modules/cpu-fx68k/fx68k.sv
+
+# X1-010 (ppriest's Arcade-Seta_MiSTer, GPL-3: MAME's x1_010.cpp transcribed)
+set_global_assignment -name SYSTEMVERILOG_FILE modules/x1_010/x1_010.sv

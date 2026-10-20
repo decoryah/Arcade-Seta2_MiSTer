@@ -1,0 +1,75 @@
+<misterromdescription>
+    <rotation>horizontal</rotation>
+    <name>Guardians / Denjin Makai II (P0-113A PCB)</name>
+    <setname>grdiansa</setname>
+    <parent>grdians</parent>
+    <mameversion>0289</mameversion>
+    <year>1995</year>
+    <manufacturer>Winkysoft (Banpresto license)</manufacturer>
+    <players>2</players>
+    <joystick>8</joystick>
+    <rbf>seta2grd</rbf>
+    <platform>Seta</platform>
+
+    <!--
+      Image for the seta2 core (rtl/s2_mem.sv, tools/seta2_image.py):
+
+        0x0000000  header: configuration bytes (0x00..0x3F), 93C46 image (0x100..0x17F)
+        0x0100000  TMP68301 program (68000 byte order; gundamex 0x500000-0x57FFFF at +0x200000)
+        0x0500000  X1-010 samples
+        0x0900000  graphics ROM (MAME's "video" region as it is)
+
+      Made by tools/make_mra.py from MAME 0.289 (src/mame/seta/seta2.cpp); expects the MAME 0.289 merged romset or
+      the split sets: parts are found by name and CRC.
+
+      DIP switches (ioctl index 254): byte 0 is DSW1 (MAME's DSW1 port, bits 7:0), byte 1 DSW2, byte 2 board
+      jumpers; a 1 is "off".  MAME's default is FFFFFF.
+    -->
+    <switches default="FF,FF,FF" base="16">
+        <dip bits="0,1" name="Difficulty" ids="Hardest,Hard,Easy,Normal"/>
+        <dip bits="2" name="Bonus Life" ids="500000,300000"/>
+        <dip bits="3" name="Title" ids="Denjin Makai II,Guardians"/>
+        <dip bits="4,5" name="Lives" ids="4,3,1,2"/>
+        <dip bits="6" name="Service Mode" ids="On,Off"/>
+        <dip bits="7" name="Demo Sounds" ids="Off,On"/>
+        <dip bits="8,9,10,11" name="Coin A" ids="Free Play,4C/3C,4C/1C,3C/4C,3C/2C,3C/1C,2C/5C,2C/3C,2C/1C,1C/7C,1C/6C,1C/5C,1C/4C,1C/3C,1C/2C,1C/1C"/>
+        <dip bits="12,13,14,15" name="Coin B" ids="Free Play,4C/3C,4C/1C,3C/4C,3C/2C,3C/1C,2C/5C,2C/3C,2C/1C,1C/7C,1C/6C,1C/5C,1C/4C,1C/3C,1C/2C,1C/1C"/>
+    </switches>
+
+    <rom index="0" zip="grdiansa.zip|grdians.zip" md5="c586e3ea09f5fa1c873efccf9b0dbad4" address="0x30000000">
+        <!-- header: configuration (tools/seta2_image.py) -->
+        <part>53 32 00 01 AB AA 10 00 99 01 2E 00 59 00 30 01 06 01 03 00 14 00 E8 00 FF FF 07 00 00 00 08 00 0F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <part repeat="0x3">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <part repeat="0x3ffc">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- maincpu: the TMP68301 program (68000 byte order) -->
+        <interleave output="16">
+            <part name="ka2_001_001.u2" crc="36adc6f2" offset="0x0" length="0x80000" map="01"/>
+            <part name="ka2_001_004.u3" crc="2704f416" offset="0x0" length="0x80000" map="10"/>
+        </interleave>
+        <interleave output="16">
+            <part name="ka2_001_002.u4" crc="bb52447b" offset="0x0" length="0x80000" map="01"/>
+            <part name="ka2_001_003.u5" crc="9c164a3b" offset="0x0" length="0x80000" map="10"/>
+        </interleave>
+        <part repeat="0x8000">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- x1snd: the X1-010 samples -->
+        <part name="ka2-001-015.u28" crc="fa97cc54" offset="0x0" length="0x200000"/>
+        <part repeat="0x8000">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- video: the graphics ROM, 8 bytes per row of a tile (MAME's region as it is) -->
+        <part repeat="0x20000">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <interleave output="64">
+            <part name="ka2-001-010.u18" crc="b3e6e95f" offset="0x0" length="0x200000" map="00000021"/>
+            <part name="ka2-001-013.u17" crc="9f7feb13" offset="0x0" length="0x200000" map="00002100"/>
+            <part name="ka2-001-007.u22" crc="d1035051" offset="0x0" length="0x200000" map="00210000"/>
+            <part name="ka2-001-016.u1" crc="99fc8efa" offset="0x0" length="0x200000" map="21000000"/>
+        </interleave>
+        <interleave output="64">
+            <part name="ka2-001-011.u20" crc="676edca6" offset="0x0" length="0x200000" map="00000021"/>
+            <part name="ka2-001-014.u19" crc="5465ef1b" offset="0x0" length="0x200000" map="00002100"/>
+            <part name="ka2-001-008.u23" crc="b2c94f31" offset="0x0" length="0x200000" map="00210000"/>
+            <part name="ka2-001-017.u2" crc="60ad7a2b" offset="0x0" length="0x200000" map="21000000"/>
+        </interleave>
+        <part repeat="0x20000">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+    </rom>
+
+    <buttons names="Attack,Jump,Special,-,Start,Coin" default="A,B,X,Start,Select"/>
+</misterromdescription>

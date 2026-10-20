@@ -1,0 +1,89 @@
+<misterromdescription>
+    <rotation>horizontal</rotation>
+    <name>Mobile Suit Gundam EX Revue</name>
+    <setname>gundamex</setname>
+    <mameversion>0289</mameversion>
+    <year>1994</year>
+    <manufacturer>Banpresto</manufacturer>
+    <players>2</players>
+    <joystick>8</joystick>
+    <rbf>seta2</rbf>
+    <platform>Seta</platform>
+
+    <!--
+      Image for the seta2 core (rtl/s2_mem.sv, tools/seta2_image.py):
+
+        0x0000000  header: configuration bytes (0x00..0x3F), 93C46 image (0x100..0x17F)
+        0x0100000  TMP68301 program (68000 byte order; gundamex 0x500000-0x57FFFF at +0x200000)
+        0x0500000  X1-010 samples
+        0x0900000  graphics ROM (MAME's "video" region as it is)
+
+      Made by tools/make_mra.py from MAME 0.289 (src/mame/seta/seta2.cpp); expects the MAME 0.289 merged romset or
+      the split sets: parts are found by name and CRC.
+
+      DIP switches (ioctl index 254): byte 0 is DSW1 (MAME's DSW1 port, bits 7:0), byte 1 DSW2, byte 2 board
+      jumpers; a 1 is "off".  MAME's default is FFFFFF.
+    -->
+    <switches default="FF,FF,FF" base="16">
+        <dip bits="0" name="Demo Sounds" ids="Off,On"/>
+        <dip bits="1,2" name="Difficulty" ids="Hardest,Hard,Easy,Normal"/>
+        <dip bits="3" name="Unused (SW1:4)" ids="On,Off"/>
+        <dip bits="4" name="Flip Screen" ids="On,Off"/>
+        <dip bits="5" name="Freeze" ids="On,Off"/>
+        <dip bits="6" name="Show Targets" ids="On,Off"/>
+        <dip bits="7" name="Service Mode" ids="On,Off"/>
+        <dip bits="8,9,10" name="Coin A" ids="4C/1C,3C/1C,2C/1C,1C/4C,1C/5C,1C/3C,1C/2C,1C/1C"/>
+        <dip bits="11,12,13" name="Coin B" ids="3 Coins/5 Credits,2C/5C,2C/3C,1C/4C,1C/5C,1C/3C,1C/2C,1C/1C"/>
+        <dip bits="14" name="Debug Mode" ids="On,Off"/>
+        <dip bits="15" name="Free Play" ids="On,Off"/>
+        <dip bits="16" name="Language (jumper)" ids="Japanese,English"/>
+    </switches>
+
+    <rom index="0" zip="gundamex.zip" md5="52a7aad374f110f0c429159e3fe5f0dc" address="0x30000000">
+        <!-- header: configuration (tools/seta2_image.py) -->
+        <part>53 32 01 23 DE AF 15 00 07 02 34 00 70 00 80 01 05 01 02 00 17 00 E0 00 FF FF 07 00 00 00 08 00 0F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <part repeat="0x3">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- the 93C46 image -->
+        <part name="eeprom.bin" crc="80f8e248" offset="0x0" length="0x80"/>
+        <part repeat="0x3ffa">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- maincpu: the TMP68301 program (68000 byte order) -->
+        <interleave output="16">
+            <part name="ka_002_002.u2" crc="e850f6d8" offset="0x0" length="0x80000" map="01"/>
+            <part name="ka_002_004.u3" crc="c0fb1208" offset="0x0" length="0x80000" map="10"/>
+        </interleave>
+        <interleave output="16">
+            <part name="ka_002_001.u4" crc="553ebe6b" offset="0x0" length="0x80000" map="01"/>
+            <part name="ka_002_003.u5" crc="946185aa" offset="0x0" length="0x80000" map="10"/>
+        </interleave>
+        <!-- maincpu 0x500000-0x57FFFF -->
+        <interleave output="16">
+            <part name="ka-001-005.u77" crc="f01d3d00" offset="0x0" length="0x80000" map="12"/>
+        </interleave>
+        <part repeat="0x6000">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- x1snd: the X1-010 samples -->
+        <part name="ka-001-015.u28" crc="ada2843b" offset="0x0" length="0x200000"/>
+        <part repeat="0x8000">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- video: the graphics ROM, 8 bytes per row of a tile (MAME's region as it is) -->
+        <interleave output="64">
+            <part name="ka-001-009.u16" crc="997d8d93" offset="0x0" length="0x200000" map="00000021"/>
+            <part name="ka-001-012.u15" crc="b789e4a8" offset="0x0" length="0x200000" map="00002100"/>
+            <part name="ka-001-006.u21" crc="6aac2f2f" offset="0x0" length="0x200000" map="00210000"/>
+            <part repeat="0x100000" map="21000000">00 00</part>
+        </interleave>
+        <interleave output="64">
+            <part name="ka-001-010.u18" crc="811b67ca" offset="0x0" length="0x200000" map="00000021"/>
+            <part name="ka-001-013.u17" crc="d8a0201f" offset="0x0" length="0x200000" map="00002100"/>
+            <part name="ka-001-007.u22" crc="588f9d63" offset="0x0" length="0x200000" map="00210000"/>
+            <part repeat="0x100000" map="21000000">00 00</part>
+        </interleave>
+        <interleave output="64">
+            <part name="ka-001-011.u20" crc="08a72700" offset="0x0" length="0x200000" map="00000021"/>
+            <part name="ka-001-014.u19" crc="7635e026" offset="0x0" length="0x200000" map="00002100"/>
+            <part name="ka-001-008.u23" crc="db55a60a" offset="0x0" length="0x200000" map="00210000"/>
+            <part repeat="0x100000" map="21000000">00 00</part>
+        </interleave>
+        <part repeat="0x20000">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+    </rom>
+
+    <buttons names="Soft Attack,Medium Attack,Hard Attack,Throw,Start,Coin" default="A,B,X,Y,Start,Select"/>
+</misterromdescription>

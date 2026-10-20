@@ -1,0 +1,76 @@
+<misterromdescription>
+    <rotation>horizontal</rotation>
+    <name>Kosodate Quiz My Angel (Japan)</name>
+    <setname>myangel</setname>
+    <mameversion>0289</mameversion>
+    <year>1996</year>
+    <manufacturer>MOSS / Namco</manufacturer>
+    <players>2</players>
+    <joystick>0</joystick>
+    <rbf>seta2</rbf>
+    <platform>Seta</platform>
+
+    <!--
+      Image for the seta2 core (rtl/s2_mem.sv, tools/seta2_image.py):
+
+        0x0000000  header: configuration bytes (0x00..0x3F), 93C46 image (0x100..0x17F)
+        0x0100000  TMP68301 program (68000 byte order; gundamex 0x500000-0x57FFFF at +0x200000)
+        0x0500000  X1-010 samples
+        0x0900000  graphics ROM (MAME's "video" region as it is)
+
+      Made by tools/make_mra.py from MAME 0.289 (src/mame/seta/seta2.cpp); expects the MAME 0.289 merged romset or
+      the split sets: parts are found by name and CRC.
+
+      DIP switches (ioctl index 254): byte 0 is DSW1 (MAME's DSW1 port, bits 7:0), byte 1 DSW2, byte 2 board
+      jumpers; a 1 is "off".  MAME's default is FFFFFF.
+    -->
+    <switches default="FF,FF,FF" base="16">
+        <dip bits="0" name="Service Mode" ids="On,Off"/>
+        <dip bits="1" name="Unused (SW1:2)" ids="On,Off"/>
+        <dip bits="2" name="Unused (SW1:3)" ids="On,Off"/>
+        <dip bits="3" name="Increase Lives While Playing" ids="No,Yes"/>
+        <dip bits="4,5" name="Lives" ids="5,4,2,3"/>
+        <dip bits="6" name="Demo Sounds" ids="Off,On"/>
+        <dip bits="7" name="Flip Screen" ids="On,Off"/>
+        <dip bits="8,9,10,11" name="Coinage" ids="Free Play,4C/3C,4C/1C,3C/4C,3C/2C,3C/1C,2C/5C,2C/3C,2C/1C,1C/7C,1C/6C,1C/5C,1C/4C,1C/3C,1C/2C,1C/1C"/>
+        <dip bits="12" name="Unused (SW2:5)" ids="On,Off"/>
+        <dip bits="13" name="Unused (SW2:6)" ids="On,Off"/>
+        <dip bits="14" name="Unused (SW2:7)" ids="On,Off"/>
+        <dip bits="15" name="Push Start To Freeze (Cheat)" ids="Yes,No"/>
+    </switches>
+
+    <rom index="0" zip="myangel.zip" md5="fcbc979087084c9b69c989e291a38c15" address="0x30000000">
+        <!-- header: configuration (tools/seta2_image.py) -->
+        <part>53 32 03 04 DE AF 15 00 01 02 1E 00 5D 00 78 01 06 01 02 00 0F 00 F0 00 FF FF 03 00 00 00 04 00 0F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <part repeat="0x3">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <part repeat="0x3ffc">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- maincpu: the TMP68301 program (68000 byte order) -->
+        <interleave output="16">
+            <part name="kq1-prge.u2" crc="6137d4c0" offset="0x0" length="0x80000" map="01"/>
+            <part name="kq1-prgo.u3" crc="4aad10d8" offset="0x0" length="0x80000" map="10"/>
+        </interleave>
+        <interleave output="16">
+            <part name="kq1-tble.u4" crc="e332a514" offset="0x0" length="0x80000" map="01"/>
+            <part name="kq1-tblo.u5" crc="760cab15" offset="0x0" length="0x80000" map="10"/>
+        </interleave>
+        <part repeat="0x8000">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- x1snd: the X1-010 samples -->
+        <part name="kq1-snd.u32" crc="8ca1b449" offset="0x0" length="0x200000"/>
+        <part repeat="0x8000">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- video: the graphics ROM, 8 bytes per row of a tile (MAME's region as it is) -->
+        <interleave output="64">
+            <part name="kq1-cg2.u20" crc="80b4e8de" offset="0x0" length="0x200000" map="00000021"/>
+            <part name="kq1-cg3.u19" crc="9bdc35c9" offset="0x0" length="0x200000" map="00002100"/>
+            <part name="kq1-cg6.u22" crc="b25acf12" offset="0x0" length="0x200000" map="00210000"/>
+            <part name="kq1-cg7.u21" crc="9f48382c" offset="0x0" length="0x200000" map="21000000"/>
+        </interleave>
+        <interleave output="64">
+            <part name="kq1-cg0.u16" crc="f8ae9a05" offset="0x0" length="0x200000" map="00000021"/>
+            <part name="kq1-cg1.u15" crc="23bd7ea4" offset="0x0" length="0x200000" map="00002100"/>
+            <part name="kq1-cg4.u18" crc="dca7f8f2" offset="0x0" length="0x200000" map="00210000"/>
+            <part name="kq1-cg5.u17" crc="a4bc4516" offset="0x0" length="0x200000" map="21000000"/>
+        </interleave>
+    </rom>
+
+    <buttons names="Answer 1,Answer 2,Answer 3,Answer 4,Start,Coin" default="A,B,X,Y,Start,Select"/>
+</misterromdescription>

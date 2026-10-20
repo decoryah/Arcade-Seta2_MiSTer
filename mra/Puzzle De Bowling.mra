@@ -1,0 +1,63 @@
+<misterromdescription>
+    <rotation>horizontal</rotation>
+    <name>Puzzle De Bowling (Japan)</name>
+    <setname>pzlbowl</setname>
+    <mameversion>0289</mameversion>
+    <year>1999</year>
+    <manufacturer>Nihon System / MOSS</manufacturer>
+    <players>2</players>
+    <joystick>8</joystick>
+    <rbf>seta2</rbf>
+    <platform>Seta</platform>
+
+    <!--
+      Image for the seta2 core (rtl/s2_mem.sv, tools/seta2_image.py):
+
+        0x0000000  header: configuration bytes (0x00..0x3F), 93C46 image (0x100..0x17F)
+        0x0100000  TMP68301 program (68000 byte order; gundamex 0x500000-0x57FFFF at +0x200000)
+        0x0500000  X1-010 samples
+        0x0900000  graphics ROM (MAME's "video" region as it is)
+
+      Made by tools/make_mra.py from MAME 0.289 (src/mame/seta/seta2.cpp); expects the MAME 0.289 merged romset or
+      the split sets: parts are found by name and CRC.
+
+      DIP switches (ioctl index 254): byte 0 is DSW1 (MAME's DSW1 port, bits 7:0), byte 1 DSW2, byte 2 board
+      jumpers; a 1 is "off".  MAME's default is FF7FFF.
+    -->
+    <switches default="FF,7F,FF" base="16">
+        <dip bits="0" name="Service Mode" ids="On,Off"/>
+        <dip bits="1" name="Demo Sounds" ids="Off,On"/>
+        <dip bits="2" name="Flip Screen" ids="On,Off"/>
+        <dip bits="3,4,5" name="Difficulty" ids="Hardest,Very Hard,Harder,Hard,Easy,Easier,Easiest,Normal"/>
+        <dip bits="6,7" name="Winning Rounds (Player VS Player)" ids="5,1,3,2"/>
+        <dip bits="8,9,10,11" name="Coinage" ids="Free Play,Unknown (1),Unknown (2),3C/4C,3C/2C,3C/1C,2C/5C,2C/3C,2C/1C,1C/7C,1C/6C,1C/5C,1C/4C,1C/3C,1C/2C,1C/1C"/>
+        <dip bits="12" name="Allow Continue" ids="No,Yes"/>
+        <dip bits="13" name="Join In" ids="No,Yes"/>
+        <dip bits="14" name="Unused (SW2:7)" ids="On,Off"/>
+        <dip bits="15" name="Language" ids="English,Japanese"/>
+    </switches>
+
+    <rom index="0" zip="pzlbowl.zip" md5="d4ba321901fd8864fc2b5616fc668786" address="0x30000000">
+        <!-- header: configuration (tools/seta2_image.py) -->
+        <part>53 32 05 10 DE AF 15 00 05 02 20 00 58 00 80 01 06 01 01 00 0F 00 F0 00 FF FF 03 00 00 00 04 00 1F 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <part repeat="0x3">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <part repeat="0x3ffc">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- maincpu: the TMP68301 program (68000 byte order) -->
+        <interleave output="16">
+            <part name="kup_u06_i03.u6" crc="314e03ac" offset="0x0" length="0x80000" map="01"/>
+            <part name="kup_u07_i03.u7" crc="a0423a04" offset="0x0" length="0x80000" map="10"/>
+        </interleave>
+        <part repeat="0xc000">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- x1snd: the X1-010 samples -->
+        <part name="kus-u18-i00.u18" crc="e2b1dfcf" offset="0x0" length="0x400000"/>
+        <!-- video: the graphics ROM, 8 bytes per row of a tile (MAME's region as it is) -->
+        <interleave output="64">
+            <part name="kuc-u38-i00.u38" crc="3db24172" offset="0x0" length="0x400000" map="00000021"/>
+            <part name="kuc-u39-i00.u39" crc="9b26619b" offset="0x0" length="0x400000" map="00002100"/>
+            <part name="kuc-u40-i00.u40" crc="7e49a2cf" offset="0x0" length="0x400000" map="00210000"/>
+            <part name="kuc-u41-i00.u41" crc="2febf19b" offset="0x0" length="0x400000" map="21000000"/>
+        </interleave>
+    </rom>
+
+    <buttons names="Left Curve,Throw,Right Curve,-,Start,Coin" default="A,B,X,Start,Select"/>
+</misterromdescription>
