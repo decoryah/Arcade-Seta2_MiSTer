@@ -28,9 +28,9 @@
         <dip bits="0" name="Service Mode" ids="On,Off"/>
         <dip bits="1" name="Demo Sounds" ids="Off,On"/>
         <dip bits="2" name="Flip Screen" ids="On,Off"/>
-        <dip bits="3,4,5" name="Difficulty" ids="Hardest,Very Hard,Harder,Hard,Easy,Easier,Easiest,Normal"/>
+        <dip bits="3,5" name="Difficulty" ids="Hardest,Very Hard,Harder,Hard,Easy,Easier,Easiest,Normal"/>
         <dip bits="6,7" name="Winning Rounds (Player VS Player)" ids="5,1,3,2"/>
-        <dip bits="8,9,10,11" name="Coinage" ids="Free Play,Unknown (1),Unknown (2),3C/4C,3C/2C,3C/1C,2C/5C,2C/3C,2C/1C,1C/7C,1C/6C,1C/5C,1C/4C,1C/3C,1C/2C,1C/1C"/>
+        <dip bits="8,11" name="Coinage" ids="Free Play,Unknown (1),Unknown (2),3C/4C,3C/2C,3C/1C,2C/5C,2C/3C,2C/1C,1C/7C,1C/6C,1C/5C,1C/4C,1C/3C,1C/2C,1C/1C"/>
         <dip bits="12" name="Allow Continue" ids="No,Yes"/>
         <dip bits="13" name="Join In" ids="No,Yes"/>
         <dip bits="14" name="Unused (SW2:7)" ids="On,Off"/>

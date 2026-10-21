@@ -328,11 +328,22 @@ def switches_lines(setname, ports_name):
         mask &= 0xffffff
         bits = [b for b in range(24) if mask >> b & 1]
         default = (default & ~mask) | dflt
-        ids = []
-        for v in range(1 << len(bits)):
-            val = sum(((v >> i) & 1) << b for i, b in enumerate(bits))
-            ids.append(settings.get(val, 'Unknown (%d)' % v).replace(',', ' '))
-        lines.append('        <dip bits="%s" name="%s" ids="%s"/>' % (','.join(str(b) for b in bits), xesc(name.replace('"', '')), xesc(','.join(ids))))
+        # MiSTer's bits="first,last" is a RANGE of bits (a single number for one bit), not a list: "8,9,10,11" was read as bits 8..9
+        # and the OSD offered the first four of sixteen settings (a player's report, 2026-10-21, release 20261021b; the Metro core's fix of 2026-10-19).
+        # A field whose bits are not contiguous gets the range around them and values= (each setting's value in it).
+        extra = ''
+        if bits[-1] - bits[0] + 1 == len(bits):
+            ids = [settings.get(v << bits[0], 'Unknown (%d)' % v).replace(',', ' ') for v in range(1 << len(bits))]
+        else:
+            print('note: %s %s: bits not contiguous (mask %#x): values=' % (setname, name, mask))
+            ids, values = [], []
+            for v in range(1 << len(bits)):
+                val = sum(((v >> i) & 1) << b for i, b in enumerate(bits))
+                ids.append(settings.get(val, 'Unknown (%d)' % v).replace(',', ' '))
+                values.append(str(val >> bits[0]))
+            extra = ' values="%s"' % ','.join(values)
+        rng = str(bits[0]) if len(bits) == 1 else '%d,%d' % (bits[0], bits[-1])
+        lines.append('        <dip bits="%s" name="%s" ids="%s"%s/>' % (rng, xesc(name.replace('"', '')), xesc(','.join(ids)), extra))
     head = '    <switches default="%02X,%02X,%02X" base="16">' % (default & 0xFF, (default >> 8) & 0xFF, default >> 16)
     return [head] + lines + ['    </switches>'], default
 

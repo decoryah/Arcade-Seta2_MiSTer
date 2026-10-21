@@ -32,7 +32,7 @@
         <dip bits="4,5" name="Lives" ids="5,4,2,3"/>
         <dip bits="6" name="Demo Sounds" ids="Off,On"/>
         <dip bits="7" name="Flip Screen" ids="On,Off"/>
-        <dip bits="8,9,10,11" name="Coinage" ids="Free Play,4C/3C,4C/1C,3C/4C,3C/2C,3C/1C,2C/5C,2C/3C,2C/1C,1C/7C,1C/6C,1C/5C,1C/4C,1C/3C,1C/2C,1C/1C"/>
+        <dip bits="8,11" name="Coinage" ids="Free Play,4C/3C,4C/1C,3C/4C,3C/2C,3C/1C,2C/5C,2C/3C,2C/1C,1C/7C,1C/6C,1C/5C,1C/4C,1C/3C,1C/2C,1C/1C"/>
         <dip bits="12" name="Unused (SW2:5)" ids="On,Off"/>
         <dip bits="13" name="Unused (SW2:6)" ids="On,Off"/>
         <dip bits="14" name="Unused (SW2:7)" ids="On,Off"/>

@@ -32,8 +32,8 @@
         <dip bits="5" name="Freeze" ids="On,Off"/>
         <dip bits="6" name="Show Targets" ids="On,Off"/>
         <dip bits="7" name="Service Mode" ids="On,Off"/>
-        <dip bits="8,9,10" name="Coin A" ids="4C/1C,3C/1C,2C/1C,1C/4C,1C/5C,1C/3C,1C/2C,1C/1C"/>
-        <dip bits="11,12,13" name="Coin B" ids="3 Coins/5 Credits,2C/5C,2C/3C,1C/4C,1C/5C,1C/3C,1C/2C,1C/1C"/>
+        <dip bits="8,10" name="Coin A" ids="4C/1C,3C/1C,2C/1C,1C/4C,1C/5C,1C/3C,1C/2C,1C/1C"/>
+        <dip bits="11,13" name="Coin B" ids="3 Coins/5 Credits,2C/5C,2C/3C,1C/4C,1C/5C,1C/3C,1C/2C,1C/1C"/>
         <dip bits="14" name="Debug Mode" ids="On,Off"/>
         <dip bits="15" name="Free Play" ids="On,Off"/>
         <dip bits="16" name="Language (jumper)" ids="Japanese,English"/>

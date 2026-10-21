@@ -26,7 +26,7 @@
       jumpers; a 1 is "off".  MAME's default is FF7FFF.
     -->
     <switches default="FF,7F,FF" base="16">
-        <dip bits="0,1,2,3" name="Coin A" ids="Free Play,1 Coin 6 Credits  1 Credit Start &amp; Continue,1 Coin 5 Credits  1 Credit Start &amp; Continue,1 Coin 4 Credits  1 Credit Start &amp; Continue,1 Coin 3 Credits  1 Credit Start &amp; Continue,1 Coin 2 Credits  1 Credit Start &amp; Continue,4 Coins Start  1 Coin Continue,4 Coins Start  2 Coins Continue,4 Coins Start  3 Coins Continue,4 Coins Start  4 Coins Continue,3 Coins Start  1 Coin Continue,3 Coins Start  2 Coins Continue,3 Coins Start  3 Coins Continue,2 Coins Start  1 Coin Continue,2 Coins Start  2 Coins Continue,1 Coin Start  1 Coin Continue"/>
+        <dip bits="0,3" name="Coin A" ids="Free Play,1 Coin 6 Credits  1 Credit Start &amp; Continue,1 Coin 5 Credits  1 Credit Start &amp; Continue,1 Coin 4 Credits  1 Credit Start &amp; Continue,1 Coin 3 Credits  1 Credit Start &amp; Continue,1 Coin 2 Credits  1 Credit Start &amp; Continue,4 Coins Start  1 Coin Continue,4 Coins Start  2 Coins Continue,4 Coins Start  3 Coins Continue,4 Coins Start  4 Coins Continue,3 Coins Start  1 Coin Continue,3 Coins Start  2 Coins Continue,3 Coins Start  3 Coins Continue,2 Coins Start  1 Coin Continue,2 Coins Start  2 Coins Continue,1 Coin Start  1 Coin Continue"/>
         <dip bits="4" name="Unused (SW1:5)" ids="On,Off"/>
         <dip bits="5" name="Unused (SW1:6)" ids="On,Off"/>
         <dip bits="6" name="Unused (SW1:7)" ids="On,Off"/>

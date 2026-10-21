@@ -26,8 +26,8 @@
       jumpers; a 1 is "off".  MAME's default is FFFFFF.
     -->
     <switches default="FF,FF,FF" base="16">
-        <dip bits="0,1,2" name="Coin A" ids="1C/6C,1C/5C,1C/4C,1C/3C,1C/2C,4C/1C,2C/1C,1C/1C"/>
-        <dip bits="3,4,5" name="Coin A (switches 4-6)" ids="1C/6C,1C/5C,1C/4C,1C/3C,1C/2C,4C/1C,2C/1C,1C/1C"/>
+        <dip bits="0,2" name="Coin A" ids="1C/6C,1C/5C,1C/4C,1C/3C,1C/2C,4C/1C,2C/1C,1C/1C"/>
+        <dip bits="3,5" name="Coin A (switches 4-6)" ids="1C/6C,1C/5C,1C/4C,1C/3C,1C/2C,4C/1C,2C/1C,1C/1C"/>
         <dip bits="6" name="Discount To Continue" ids="On,Off"/>
         <dip bits="7" name="Service Mode" ids="On,Off"/>
         <dip bits="8" name="Vert. Flip Screen" ids="On,Off"/>

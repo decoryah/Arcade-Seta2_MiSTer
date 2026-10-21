@@ -25,13 +25,13 @@
       jumpers; a 1 is "off".  MAME's default is FFCCFF.
     -->
     <switches default="FF,CC,FF" base="16">
-        <dip bits="0,1,2" name="Coinage" ids="5C/1C,4C/1C,3C/1C,2C/1C,1C/4C,1C/3C,1C/2C,1C/1C"/>
+        <dip bits="0,2" name="Coinage" ids="5C/1C,4C/1C,3C/1C,2C/1C,1C/4C,1C/3C,1C/2C,1C/1C"/>
         <dip bits="3" name="Demo Sounds" ids="Off,On"/>
         <dip bits="4" name="Tumo Pin" ids="Off,On"/>
         <dip bits="5" name="Flip Screen" ids="On,Off"/>
         <dip bits="6" name="Free Play" ids="On,Off"/>
         <dip bits="7" name="Service Mode" ids="On,Off"/>
-        <dip bits="8,9,10" name="Difficulty" ids="4,3,2,1,0,7,6,5"/>
+        <dip bits="8,10" name="Difficulty" ids="4,3,2,1,0,7,6,5"/>
         <dip bits="11" name="Allow Continue" ids="No,Yes"/>
         <dip bits="12" name="Select Girl" ids="Yes,No"/>
         <dip bits="13" name="Com Put" ids="On,Off"/>
