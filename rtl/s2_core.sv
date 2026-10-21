@@ -26,7 +26,13 @@ module s2_core #(
     input  logic        cache_inval,
 
     // inputs (as the driver's ports, active low)
-    input  logic [15:0] in_p1, in_p2, in_sys, in_dsw1, in_dsw2, in_ex0, in_ex1,
+    // the light-gun games' battery RAM: its second port (s2_main) and the game's writes
+    input  logic [12:0] nv_b_addr,
+    input  logic        nv_b_we,
+    input  logic  [7:0] nv_b_din,
+    output logic  [7:0] nv_b_q,
+    output logic        nv_written,
+    input  logic [15:0] in_p1, in_p2, in_sys, in_dsw1, in_dsw2, in_ex0, in_ex1, in_ex2,
     input  logic [5:0]  mj_keys [10],       // mj4simai: KEY0..4 (player 1), KEY5..9 (player 2), active low
     // EEPROM image
     input  logic        ee_init_we,
@@ -101,7 +107,8 @@ module s2_core #(
     end
 
     // the parallel port: gundamex reads the EEPROM's DO at bit 3 (the other bits 0); the others' callback is the default 0xffff
-    assign par_in = cfg_eeprom ? {12'd0, ee_do, 3'd0} : 16'hffff;
+    // the parallel port's pins: Gundam EX's 93C46 data out; the light-gun board's second DIP bank (MAME: "DSW2 // fffd0a.w")
+    assign par_in = cfg_eeprom ? {12'd0, ee_do, 3'd0} : (cfg_map == 3'd7) ? in_dsw2 : 16'hffff;
 
     s2_main u_main (
         .clk(clk), .rst(rst), .cen_phi1(cen_phi1), .cen_phi2(cen_phi2), .cpu_tick(tick), .cfg_map(cfg_map),
@@ -110,7 +117,8 @@ module s2_core #(
         .v_req(v_req), .v_we(v_we), .v_addr(v_addr), .v_din(v_din), .v_be(v_be), .v_ack(v_ack), .v_dout(v_dout),
         .x_req(x_req), .x_we(x_we), .x_addr(x_addr), .x_din(x_din), .x_uds(x_uds), .x_lds(x_lds), .x_dout(x_dout),
         .snd_bank(snd_bank),
-        .in_p1(in_p1), .in_p2(in_p2), .in_sys(in_sys), .in_dsw1(in_dsw1), .in_dsw2(in_dsw2), .in_ex0(in_ex0), .in_ex1(in_ex1),
+        .in_p1(in_p1), .in_p2(in_p2), .in_sys(in_sys), .in_dsw1(in_dsw1), .in_dsw2(in_dsw2), .in_ex0(in_ex0), .in_ex1(in_ex1), .in_ex2(in_ex2),
+        .nv_b_addr(nv_b_addr), .nv_b_we(nv_b_we), .nv_b_din(nv_b_din), .nv_b_q(nv_b_q), .nv_written(nv_written),
         .in_key0(in_key0), .in_key1(in_key1), .key_row(key_row),
         .irq_vblank(irq_vblank), .irq_raster(irq_raster),
         .par_in(par_in), .par_out(par_out), .par_wr(par_wr),

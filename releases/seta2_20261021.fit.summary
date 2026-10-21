@@ -1,0 +1,20 @@
+Fitter Status : Successful - Wed Oct 21 06:57:36 2026
+Quartus Prime Version : 17.0.2 Build 602 07/19/2017 SJ Lite Edition
+Revision Name : Seta2
+Top-level Entity Name : sys_top
+Family : Cyclone V
+Device : 5CSEBA6U23I7
+Timing Models : Final
+Logic utilization (in ALMs) : 19,341 / 41,910 ( 46 % )
+Total registers : 27176
+Total pins : 145 / 314 ( 46 % )
+Total virtual pins : 0
+Total block memory bits : 4,081,020 / 5,662,720 ( 72 % )
+Total RAM Blocks : 533 / 553 ( 96 % )
+Total DSP Blocks : 46 / 112 ( 41 % )
+Total HSSI RX PCSs : 0
+Total HSSI PMA RX Deserializers : 0
+Total HSSI TX PCSs : 0
+Total HSSI PMA TX Serializers : 0
+Total PLLs : 3 / 6 ( 50 % )
+Total DLLs : 0 / 4 ( 0 % )

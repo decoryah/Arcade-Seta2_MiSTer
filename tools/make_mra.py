@@ -37,7 +37,31 @@ GAMES = {
     'pzlbowl':   ('Puzzle De Bowling (Japan)', 1999, 'Nihon System / MOSS', 'pzlbowl', 'Puzzle De Bowling', ''),
     'penbros':   ('Penguin Brothers (Japan)', 2000, 'Subsino', 'penbros', 'Penguin Brothers', ''),
     'ablast':    ('Hong Tian Lei (A-Blast) (Japan)', 2000, 'Subsino', 'penbros', 'Hong Tian Lei (A-Blast)', '_alternatives/_Penguin Brothers'),
+    # Sammy's light-gun games
+    'deerhunt':  ('Deer Hunting USA V4.3', 2000, 'Sammy USA Corporation', 'deerhunt', 'Deer Hunting USA', ''),
+    'deerhunta': ('Deer Hunting USA V4.2', 2000, 'Sammy USA Corporation', 'deerhunt', 'Deer Hunting USA (V4.2)',
+                  '_alternatives/_Deer Hunting USA'),
+    'deerhuntb': ('Deer Hunting USA V4.0', 2000, 'Sammy USA Corporation', 'deerhunt', 'Deer Hunting USA (V4.0)',
+                  '_alternatives/_Deer Hunting USA'),
+    'deerhuntc': ('Deer Hunting USA V3', 2000, 'Sammy USA Corporation', 'deerhunt', 'Deer Hunting USA (V3)',
+                  '_alternatives/_Deer Hunting USA'),
+    'deerhuntd': ('Deer Hunting USA V2', 2000, 'Sammy USA Corporation', 'deerhunt', 'Deer Hunting USA (V2)',
+                  '_alternatives/_Deer Hunting USA'),
+    'deerhunte': ('Deer Hunting USA V1', 2000, 'Sammy USA Corporation', 'deerhunt', 'Deer Hunting USA (V1)',
+                  '_alternatives/_Deer Hunting USA'),
+    'deerhuntj': ('Deer Hunting USA V4.4.1 (Japan)', 2000, 'Sammy USA Corporation', 'deerhunt', 'Deer Hunting USA (V4.4.1, Japan)',
+                  '_alternatives/_Deer Hunting USA'),
+    'turkhunt':  ('Turkey Hunting USA V1.00', 2001, 'Sammy USA Corporation', 'turkhunt', 'Turkey Hunting USA', ''),
+    'wschamp':   ('Wing Shooting Championship V2.00', 2001, 'Sammy USA Corporation', 'wschamp', 'Wing Shooting Championship', ''),
+    'wschampa':  ('Wing Shooting Championship V1.01', 2001, 'Sammy USA Corporation', 'wschamp', 'Wing Shooting Championship (V1.01)',
+                  '_alternatives/_Wing Shooting Championship'),
+    'wschampb':  ('Wing Shooting Championship V1.00', 2001, 'Sammy USA Corporation', 'wschamp', 'Wing Shooting Championship (V1.00)',
+                  '_alternatives/_Wing Shooting Championship'),
+    'trophyh':   ('Trophy Hunting - Bear & Moose V1.00', 2002, 'Sammy USA Corporation', 'trophyh', 'Trophy Hunting - Bear & Moose', ''),
+    'trophyht':  ('Trophy Hunting - Bear & Moose V1.00 (location test)', 2002, 'Sammy USA Corporation', 'trophyht',
+                  'Trophy Hunting - Bear & Moose (location test)', '_alternatives/_Trophy Hunting - Bear & Moose'),
 }
+GUN_SETS = [_s for _s in GAMES if seta2_cfg.video_cfg(_s, 64)['map'] == seta2_cfg.MAP_SAMSHOOT]
 
 # the core's joystick bits 4..10 (Seta2.sv): button 1..4, start, coin, service; "-" = the set has no such button
 # The buttons' names, in MAME's order (Button 1 .. 4), as the games call them: Gundam EX's How To Play ("Button "A" is soft attack",
@@ -57,6 +81,10 @@ BUTTONS = {
 BUTTONS['grdiansa'] = BUTTONS['grdiansbl'] = BUTTONS['grdians']
 BUTTONS['myangel2'] = BUTTONS['myangel']
 BUTTONS['ablast'] = BUTTONS['penbros']
+# the light-gun games (MAME's BUTTONS port): trigger and pump, each player on their own joystick; Trophy Hunting's location test has
+# triggers only.  The guns' aim comes from the left stick, the d-pad or the mouse (Seta2.sv, rtl/s2_guns.sv).
+for _s in GUN_SETS:
+    BUTTONS[_s] = ['Trigger', '-', '-', '-'] if _s == 'trophyht' else ['Trigger', 'Pump', '-', '-']
 
 _TABLE = None
 
@@ -205,6 +233,11 @@ def rom_lines(setname):
 
 
 # ---------------------------------------------------------------- DIP switches from the driver's INPUT_PORTS
+def xesc(t):
+    """XML text and attribute values: & < > \" escaped (Wing Shooting's coin settings, Trophy Hunting's title)"""
+    return t.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
+
+
 def def_str(s):
     s = s.strip()
     m = re.match(r'DEF_STR\(\s*(\w+)\s*\)', s)
@@ -217,18 +250,43 @@ def def_str(s):
     return m.group(1) if m else s
 
 
+def _port_blocks(ports_name, src):
+    """the INPUT_PORTS block of ports_name as {port: [lines]}: its PORT_INCLUDE first, its PORT_MODIFY sections applied over it (the
+    modified port keeps the included lines, the new ones after them)"""
+    m = re.search(r'INPUT_PORTS_START\(\s*%s\s*\)(.*?)INPUT_PORTS_END' % ports_name, src, re.S)
+    if m is None:                 # defined elsewhere (mj4simai's mahjong matrix): no DIP switches there
+        return {}
+    blk = m.group(1)
+    ports = {}
+    cur = None
+    for line in blk.splitlines():
+        m = re.search(r'PORT_INCLUDE\(\s*(\w+)\s*\)', line)
+        if m:
+            for k, v in _port_blocks(m.group(1), src).items():
+                ports[k] = list(v)
+            continue
+        m = re.search(r'PORT_(START|MODIFY)\("(\w+)"\)', line)
+        if m:
+            cur = m.group(2)
+            if m.group(1) == 'START':
+                ports[cur] = []
+            continue
+        if cur is not None:
+            ports.setdefault(cur, []).append(line)
+    return ports
+
+
 def port_dips(ports_name, port):
     src = open(paths.MAME_SRC, encoding='utf-8').read()
-    blk = re.search(r'INPUT_PORTS_START\(\s*%s\s*\)(.*?)INPUT_PORTS_END' % ports_name, src, re.S).group(1)
-    i = blk.index('PORT_START("%s")' % port)
-    j = blk.find('PORT_START(', i + 5)
-    dsw = blk[i:j if j > 0 else len(blk)]
+    dsw = _port_blocks(ports_name, src).get(port, [])
     dips = []                     # [mask, default, name, {value: label}]
-    for line in dsw.splitlines():
+    for line in dsw:
         line = line.split('//')[0].strip()
         m = re.match(r'PORT_DIPNAME\(\s*(0x[0-9a-fA-F]+)\s*,\s*(0x[0-9a-fA-F]+)\s*,\s*(.*?)\s*\)\s*(PORT_DIPLOCATION.*)?$', line)
         if m:
-            dips.append([int(m.group(1), 16), int(m.group(2), 16), def_str(m.group(3)), {}])
+            mask = int(m.group(1), 16)
+            dips = [d for d in dips if not d[0] & mask]           # a PORT_MODIFY's switch replaces the one it overlaps
+            dips.append([mask, int(m.group(2), 16), def_str(m.group(3)), {}])
             continue
         m = re.match(r'PORT_DIPSETTING\(\s*(0x[0-9a-fA-F]+)\s*,\s*(.*?)\s*\)$', line)
         if m:
@@ -237,13 +295,24 @@ def port_dips(ports_name, port):
         m = re.match(r'PORT_(DIPUNUSED|DIPUNKNOWN)_DIPLOC\(\s*(0x[0-9a-fA-F]+)\s*,\s*(0x[0-9a-fA-F]+)\s*,\s*"(.*?)"\s*\)', line)
         if m:
             mask, dflt = int(m.group(2), 16), int(m.group(3), 16)
+            dips = [d for d in dips if not d[0] & mask]
             dips.append([mask, dflt, '%s (%s)' % ('Unused' if m.group(1) == 'DIPUNUSED' else 'Unknown', m.group(4)), {mask: 'Off', 0: 'On'}])
             continue
         m = re.match(r'PORT_SERVICE_DIPLOC\(\s*(0x[0-9a-fA-F]+)\s*,\s*IP_ACTIVE_LOW\s*,\s*"(.*?)"\s*\)', line)
         if m:
             mask = int(m.group(1), 16)
+            dips = [d for d in dips if not d[0] & mask]
             dips.append([mask, mask, 'Service Mode', {mask: 'Off', 0: 'On'}])
             continue
+    dips.sort(key=lambda d: d[0] & -d[0])
+    # MAME now and then names two switches alike (Deer Hunting: two "Coin A" banks, SW1:1-3 and SW1:4-6): the later one gets its
+    # switches' numbers
+    seen = set()
+    for d in dips:
+        if d[2] in seen and not d[2].startswith(('Unknown', 'Unused')):
+            bits = [b for b in range(16) if d[0] >> b & 1]
+            d[2] = '%s (switches %d-%d)' % (d[2], bits[0] + 1, bits[-1] + 1)
+        seen.add(d[2])
     return dips
 
 
@@ -263,7 +332,7 @@ def switches_lines(setname, ports_name):
         for v in range(1 << len(bits)):
             val = sum(((v >> i) & 1) << b for i, b in enumerate(bits))
             ids.append(settings.get(val, 'Unknown (%d)' % v).replace(',', ' '))
-        lines.append('        <dip bits="%s" name="%s" ids="%s"/>' % (','.join(str(b) for b in bits), name.replace('"', ''), ','.join(ids)))
+        lines.append('        <dip bits="%s" name="%s" ids="%s"/>' % (','.join(str(b) for b in bits), xesc(name.replace('"', '')), xesc(','.join(ids))))
     head = '    <switches default="%02X,%02X,%02X" base="16">' % (default & 0xFF, (default >> 8) & 0xFF, default >> 16)
     return [head] + lines + ['    </switches>'], default
 
@@ -272,7 +341,7 @@ def switches_lines(setname, ports_name):
 def rbf_name(setname):
     if setname.startswith('grdians'):
         return 'seta2grd'
-    if setname in ('penbros', 'ablast'):
+    if setname in ('penbros', 'ablast') or setname in GUN_SETS:
         return 'seta2pen'
     return 'seta2'
 
@@ -284,15 +353,15 @@ def mra_text(setname):
     sw, default = switches_lines(setname, ports)
     out = ['<misterromdescription>',
            '    <rotation>horizontal</rotation>',
-           '    <name>%s</name>' % title,
+           '    <name>%s</name>' % xesc(title),
            '    <setname>%s</setname>' % setname]
     if parent:
         out.append('    <parent>%s</parent>' % parent)
     out += ['    <mameversion>0289</mameversion>',
             '    <year>%d</year>' % year,
-            '    <manufacturer>%s</manufacturer>' % maker,
-            '    <players>2</players>',
-            '    <joystick>%s</joystick>' % ('0' if setname in ('myangel', 'myangel2', 'mj4simai') else '8'),
+            '    <manufacturer>%s</manufacturer>' % xesc(maker),
+            '    <players>%d</players>' % (1 if setname in GUN_SETS and not seta2_cfg.GUNS.get(setname) else 2),
+            '    <joystick>%s</joystick>' % ('0' if setname in ('myangel', 'myangel2', 'mj4simai') or setname in GUN_SETS else '8'),
             '    <rbf>%s</rbf>' % rbf_name(setname),
             '    <platform>Seta</platform>',
             '',
@@ -324,7 +393,11 @@ def mra_text(setname):
             defaults.append(p)
     buttons = '    <buttons names="%s" default="%s"/>' % (','.join(used + ['Start', 'Coin']),
                                                        ','.join(defaults + ['Start', 'Select']))
-    out += ['    </rom>', '', buttons, '</misterromdescription>', '']
+    out += ['    </rom>']
+    if setname in GUN_SETS:
+        # the battery RAM's first 8 KB (Seta2.sv): Main_MiSTer sends the saved file after the ROMs and saves it when the core asks
+        out += ['    <nvram index="4" size="8192"/>']
+    out += ['', buttons, '</misterromdescription>', '']
     return '\n'.join(out), default
 
 
@@ -332,7 +405,7 @@ def main(argv):
     import mra_build
     outdir = argv[1] if len(argv) > 1 else os.path.join(paths.REPO, 'mra')
     bad = 0
-    for s in seta2_rom.PHASE1:
+    for s in list(seta2_rom.PHASE1) + GUN_SETS:
         text, default = mra_text(s)
         title, _, _, _, fname, folder = GAMES[s]
         parent = table()[s]['parent']

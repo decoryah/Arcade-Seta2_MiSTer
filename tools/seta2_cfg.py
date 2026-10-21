@@ -13,7 +13,7 @@ import sys
 MCLK = 96_000_000                 # the core's machine clock
 
 # memory maps (s2_main.sv decodes them by number)
-MAP_GRDIANS, MAP_GUNDAMEX, MAP_MJ4SIMAI, MAP_MYANGEL, MAP_MYANGEL2, MAP_PZLBOWL, MAP_PENBROS = range(7)
+MAP_GRDIANS, MAP_GUNDAMEX, MAP_MJ4SIMAI, MAP_MYANGEL, MAP_MYANGEL2, MAP_PZLBOWL, MAP_PENBROS, MAP_SAMSHOOT = range(8)
 
 CPU_50_3 = 50_000_000 / 3          # XTAL(50'000'000) / 3
 CPU_32_2 = 32_530_470 / 2          # XTAL(32'530'470) / 2  (seta2_32m)
@@ -31,6 +31,14 @@ _T = {
     'penbros':   (MAP_PENBROS,  CPU_50_3, 28_000_000 / 4,    (0x3f, 0x65, 0x1a5, 0x1c0), (3, 0x0f, 0xef, 0x0ff), 320, 224),
     'ablast':    (MAP_PENBROS,  CPU_50_3, 28_000_000 / 4,    (0x3f, 0x65, 0x1a5, 0x1c0), (3, 0x0f, 0xef, 0x0ff), 320, 224),
 }
+# Sammy's light-gun games (MAME's samshoot machine): all of them program the same raster, 447 x 262 with 320 x 240 shown; at 7 MHz
+# (the Penguin Brothers core file's dot clock) that is 15.66 kHz / 59.77 Hz.  The board's own dot clock is not known.
+for _s in ('deerhunt', 'deerhunta', 'deerhuntb', 'deerhuntc', 'deerhuntd', 'deerhunte', 'deerhuntj', 'turkhunt',
+           'wschamp', 'wschampa', 'wschampb', 'trophyh', 'trophyht'):
+    _T[_s] = (MAP_SAMSHOOT, CPU_50_3, 28_000_000 / 4, (0x23, 0x60, 0x1a0, 0x1bd), (2, 0x0f, 0xff, 0x105), 320, 240)
+# their guns (header byte 33): 0 one gun, trigger and pump (Deer / Turkey Hunting); 1 two guns, triggers and pumps (Wing Shooting,
+# Trophy Hunting); 2 two guns, triggers only (Trophy Hunting's location test: its PCB has two 4-pin gun connectors)
+GUNS = {'wschamp': 1, 'wschampa': 1, 'wschampb': 1, 'trophyh': 1, 'trophyht': 2}
 SETS = list(_T)
 
 # The totals the core sends where they are not the CRTC's (dots per line, lines per frame).  The RetroTINK 4K sorts a MiSTer

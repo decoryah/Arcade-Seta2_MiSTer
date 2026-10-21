@@ -66,9 +66,18 @@ module s2_main (
     output logic  [7:0] snd_bank [8],
 
     // inputs (active low, as the driver's ports): P1, P2, SYSTEM, DSW1, DSW2, IN0, IN1 (gundamex), KEY0 / KEY1 (mj4simai's
-    // mahjong_matrix: the rows selected by key_row read ANDed)
-    input  logic [15:0] in_p1, in_p2, in_sys, in_dsw1, in_dsw2, in_ex0, in_ex1, in_key0, in_key1,
+    // mahjong_matrix: the rows selected by key_row read ANDed).  The light-gun games (samshoot): P1 = BUTTONS, P2 = TRIGGER,
+    // SYSTEM = COIN, IN0 / IN1 = GUN1 / GUN2, EX2 = PUMP
+    input  logic [15:0] in_p1, in_p2, in_sys, in_dsw1, in_dsw2, in_ex0, in_ex1, in_ex2, in_key0, in_key1,
     output logic  [7:0] key_row,
+
+    // the light-gun games' battery RAM, its second port (byte address, little-endian words: MAME's nvram file order): the SD card's
+    // file (Seta2.sv); nv_written pulses when the game changes it
+    input  logic [12:0] nv_b_addr,
+    input  logic        nv_b_we,
+    input  logic  [7:0] nv_b_din,
+    output logic  [7:0] nv_b_q,
+    output logic        nv_written,
 
     // interrupts
     input  logic        irq_vblank,                   // INT0 (level)
@@ -115,6 +124,9 @@ module s2_main (
     assign cpu_halted = ~oHALTEDn;
     assign dbg_pc_addr = {eab, 1'b0};
 
+    // the memory maps (header byte 2, tools/seta2_cfg.py): M_SAM is Sammy's light-gun board (MAME's samshoot)
+    localparam [2:0] M_GRD = 3'd0, M_GUN = 3'd1, M_MJ4 = 3'd2, M_MYA = 3'd3, M_MY2 = 3'd4, M_PZL = 3'd5, M_PEN = 3'd6, M_SAM = 3'd7;
+
     // ------------------------------------------------------------------ TMP68301
     logic        t_we;
     logic [15:0] t_dout;
@@ -127,19 +139,34 @@ module s2_main (
         else if (irq_raster) rast_hold <= 1'b1;
         else if (t_hold[1]) rast_hold <= 1'b0;
     end
+
+    // INT2, the light-gun games only: MAME's set_periodic_int(irq2_line_hold, 60 Hz), a timer of its own (not the screen's): held
+    // until acknowledged, raised every 1/60 s of the CPU's clock (50 MHz / 3: 277,778 cycles, 59.99999 Hz)
+    localparam [18:0] P60 = 19'd277_778;
+    logic [18:0] p60_cnt;
+    logic        p60_hold;
+    always_ff @(posedge clk) begin
+        if (rst) begin p60_cnt <= '0; p60_hold <= 1'b0; end
+        else begin
+            if (t_hold[2]) p60_hold <= 1'b0;
+            if (cpu_tick && cfg_map == M_SAM) begin
+                if (p60_cnt == P60 - 19'd1) begin p60_cnt <= '0; p60_hold <= 1'b1; end
+                else p60_cnt <= p60_cnt + 19'd1;
+            end
+        end
+    end
     wire [1:0] be = {~UDSn, ~LDSn};
     s2_tmp68301 u_tmp (
         .clk(clk), .rst(rst), .cpu_tick(cpu_tick),
         .reg_we(t_we), .reg_addr(eab[9:1]), .reg_din(oEdb), .reg_be(be), .reg_dout(t_dout),
-        .ext_pin({1'b0, rast_hold, irq_vblank}), .ipl(ipl), .iack(t_iack), .vector(t_vec), .hold_ack(t_hold),
+        .ext_pin({p60_hold, rast_hold, irq_vblank}), .ipl(ipl), .iack(t_iack), .vector(t_vec), .hold_ack(t_hold),
         .par_in(par_in), .par_out(par_out), .par_wr(par_wr)
     );
 
     // ------------------------------------------------------------------ decode
     wire [23:0] ba = {eab, 1'b0};
-    localparam [2:0] M_GRD = 3'd0, M_GUN = 3'd1, M_MJ4 = 3'd2, M_MYA = 3'd3, M_MY2 = 3'd4, M_PZL = 3'd5, M_PEN = 3'd6;
 
-    typedef enum logic [3:0] { D_NONE, D_ROM, D_RAM, D_SLOW, D_VID, D_X1, D_TMP, D_PORT, D_BANK, D_KROW, D_PROT } dev_t;
+    typedef enum logic [3:0] { D_NONE, D_ROM, D_RAM, D_SLOW, D_VID, D_X1, D_TMP, D_PORT, D_BANK, D_KROW, D_PROT, D_NVR } dev_t;
     dev_t        dev, dev_c;
     logic [21:1] d_rom, d_rom_c;                      // ROM word address in the program section
     logic [18:1] d_slow, d_slow_c;                    // slow RAM word address
@@ -245,6 +272,26 @@ module s2_main (
                 else if (ba[23:16] == 8'hb4) dev_c = D_VID;                                              // B40000 palette
                 else if (ba[23:6] == 18'h2d800) dev_c = D_VID;                                           // B60000-B6003F registers
             end
+            M_SAM: begin                                                                                 // samshoot_map
+                if (ba[23:21] == 3'b000) begin dev_c = D_ROM; d_rom_c = {1'b0, ba[20:1]}; end            // 000000-1FFFFF
+                else if (ba[23:16] == 8'h20) dev_c = D_RAM;                                              // 200000-20FFFF
+                else if (ba[23:13] == 11'h180) dev_c = D_NVR;                                              // 300000-301FFF NVRAM (block RAM)
+                else if (ba[23:16] == 8'h30) begin dev_c = D_SLOW; d_slow_c = {2'b00, ba[16:1]}; end     // 302000-30FFFF the rest of it
+                else if (ba[23:2] == 22'h100000) begin dev_c = D_PORT; d_port_c = ba[1] ? in_p1 : in_dsw1; end   // 400000 DSW1, 400002 BUTTONS
+                else if (ba[23:4] == 20'h40030) begin dev_c = D_BANK; d_bank_c = ba[3:1]; end            // 400300-40030F sample banks
+                else if (ba[23:20] == 4'b0101) begin dev_c = D_PORT; d_port_c = ba[19] ? in_ex1 : in_ex0; end    // 500000 GUN1, 580000 GUN2
+                else if (ba[23:3] == 21'h0e0000) begin
+                    dev_c = D_PORT;                                                                      // 700000-700007 (writes: coin counters)
+                    case (ba[2:1])
+                        2'd0: d_port_c = in_p2;                                                          // TRIGGER (START1)
+                        2'd1: d_port_c = in_ex2;                                                         // PUMP (START2)
+                        2'd2: d_port_c = in_sys;                                                         // COIN
+                        default: d_port_c = 16'h0000;                                                    // watchdog
+                    endcase
+                end
+                else if (ba[23:19] == 5'b10000) dev_c = D_VID;                                           // 800000-87FFFF
+                else if (ba[23:14] == 10'h240) dev_c = D_X1;                                             // 900000-903FFF
+            end
             default: ;
         endcase
         // the video window: 0x50000-0x5FFFF is the board's (slow RAM), not the chip's; penbros has none
@@ -280,6 +327,49 @@ module s2_main (
         ram_q[7:0] <= ram_lo[ram_a];
     end
 
+    // ------------------------------------------------------------------ the light-gun games' battery RAM (8 KB)
+    // MAME gives samshoot 64 KB of NVRAM at 0x300000; after power-on the games write only its first 2 KB (MAME, 100 s of play each:
+    // Deer Hunting and Trophy Hunting 0x300000-0x3007FF, Turkey Hunting and Wing Shooting 0x300000-0x3003FF; Trophy Hunting's
+    // power-on check goes over all 64 KB and puts back what it finds), so 0x300000-0x301FFF is block RAM that the SD card's file
+    // fills and saves (rtl/s2_nvram.sv), the rest the slow RAM.  Starts at zero, as MAME's (nvram_device::DEFAULT_ALL_0);
+    // s2_nvram clears it at every ROM load before the saved file comes.
+    (* ramstyle = "no_rw_check" *) logic [7:0] nv_hi [4096];
+    (* ramstyle = "no_rw_check" *) logic [7:0] nv_lo [4096];
+    logic [11:0] nv_a;
+    logic [15:0] nv_d, nv_q;
+    logic  [1:0] nv_we, nv_wreq, nv_wp;
+    logic        nv_chg;
+    logic  [7:0] nvb_hi_q, nvb_lo_q;
+    logic        nvb_lane, nv_sel;
+    always_ff @(posedge clk) begin
+        if (nv_we[1]) nv_hi[nv_a] <= nv_d[15:8];
+        nv_q[15:8] <= nv_hi[nv_a];
+    end
+    always_ff @(posedge clk) begin
+        if (nv_we[0]) nv_lo[nv_a] <= nv_d[7:0];
+        nv_q[7:0] <= nv_lo[nv_a];
+    end
+    always_ff @(posedge clk) begin
+        if (nv_b_we && nv_b_addr[0]) nv_hi[nv_b_addr[12:1]] <= nv_b_din;
+        nvb_hi_q <= nv_hi[nv_b_addr[12:1]];
+    end
+    always_ff @(posedge clk) begin
+        if (nv_b_we && !nv_b_addr[0]) nv_lo[nv_b_addr[12:1]] <= nv_b_din;
+        nvb_lo_q <= nv_lo[nv_b_addr[12:1]];
+        nvb_lane <= nv_b_addr[0];
+    end
+    assign nv_b_q = nvb_lane ? nvb_hi_q : nvb_lo_q;
+    // A write reads the old word first (nv_q, a clock after the address), then writes: nv_written says the contents changed (the
+    // games rewrite unchanged values many times a frame; only a change is worth saving).  The bus cycle ends as before (B_DONE);
+    // the write lands three clocks after the address, long before the CPU's next access.
+    always_ff @(posedge clk) begin
+        nv_wp  <= nv_wreq;
+        nv_we  <= nv_wp;
+        nv_chg <= |(nv_wp & {nv_q[15:8] != nv_d[15:8], nv_q[7:0] != nv_d[7:0]});
+    end
+    assign nv_written = nv_chg;
+    initial for (int i = 0; i < 4096; i++) begin nv_hi[i] = 8'h00; nv_lo[i] = 8'h00; end
+
     // ------------------------------------------------------------------ bus cycle
     // Every access completes with DTACK from here.  Writes wait for the data strobes (a clock after AS on the 68000).
     typedef enum logic [3:0] { B_IDLE, B_WAIT, B_RAM1, B_RAM2, B_DONE, B_P1, B_P2, B_P3, B_P4, B_P5 } bst_t;
@@ -294,6 +384,7 @@ module s2_main (
         t_we   <= 1'b0;
         t_iack <= 1'b0;
         ram_we <= 2'b00;
+        nv_wreq <= 2'b00;
         if (rst) begin
             rdy <= 1'b0; bst <= B_IDLE; rom_req <= 1'b0; sr_req <= 1'b0; v_req <= 1'b0; x_req <= 1'b0; x_busy <= 1'b0;
             key_row <= 8'h00;
@@ -314,7 +405,13 @@ module s2_main (
                         case (dev)
                             D_ROM:  if (eRWn) begin rom_addr <= d_rom; rom_req <= 1'b1; bst <= B_WAIT; end
                                     else bst <= B_DONE;
+                            D_NVR:  begin
+                                nv_a <= eab[12:1]; nv_d <= oEdb; nv_sel <= 1'b1;
+                                if (!eRWn) begin nv_wreq <= be; bst <= B_DONE; end
+                                else bst <= B_RAM1;
+                            end
                             D_RAM:  begin
+                                nv_sel <= 1'b0;
                                 ram_a <= eab[15:1]; ram_d <= oEdb;
                                 if (!eRWn) begin ram_we <= be; bst <= B_DONE; end
                                 else bst <= B_RAM1;
@@ -342,7 +439,7 @@ module s2_main (
                     end
                 end
                 B_RAM1: bst <= B_RAM2;
-                B_RAM2: begin iEdb <= ram_q; bst <= B_DONE; end
+                B_RAM2: begin iEdb <= nv_sel ? nv_q : ram_q; bst <= B_DONE; end
                 B_WAIT: begin
                     if (rom_req && rom_ack) begin iEdb <= rom_data; rom_req <= 1'b0; bst <= B_DONE; end
                     if (sr_req && sr_ack)   begin iEdb <= sr_dout;  sr_req  <= 1'b0; bst <= B_DONE; end

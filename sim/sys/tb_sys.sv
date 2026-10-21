@@ -23,9 +23,20 @@ module tb_sys #(
 
     // inputs: joystick bits as Seta2.sv's (0 R, 1 L, 2 D, 3 U, 4..7 buttons, 8 start, 9 coin, 10 service), DIPs
     input  logic [15:0] joy1, joy2,
+    input  logic [15:0] gun1, gun2,           // the light guns' ports { Y, X }, MAME's units (rtl/s2_guns.sv makes them in Seta2.sv)
     input  logic  [7:0] dsw1, dsw2, jumpers,
     input  logic        pause,
     input  logic  [9:0] rdly,
+
+    // the light-gun games' battery RAM file (Seta2.sv's hps_io file port and OSD, through rtl/s2_nvram.sv); rom_dl: the ROM download
+    input  logic        rom_dl,
+    input  logic        io_dl, io_ul, io_wr,
+    input  logic  [7:0] io_index,
+    input  logic [26:0] io_addr,
+    input  logic  [7:0] io_dout,
+    output logic  [7:0] io_din,
+    input  logic        osd, nv_save,
+    output logic        nv_req,
 
     // DDR3
     input  logic        DDRAM_BUSY,
@@ -84,7 +95,8 @@ module tb_sys #(
     // (mc_rst_in stands for Seta2.sv's reset and ROM download)
     wire loading = mc_rst_in | dl_busy | fl_busy | ~sd_ready;
     wire ee_busy;
-    always_ff @(posedge clk) mc_rst <= loading | ee_busy;
+    wire nv_dl;
+    always_ff @(posedge clk) mc_rst <= loading | nv_dl | ee_busy;
 
     // the EEPROM image (Seta2.sv): copied once the loading has finished
     logic  [7:0] ee_cnt = 8'd130;
@@ -139,6 +151,25 @@ module tb_sys #(
         in_ex0 = {15'h7fff, ~j1_b[3]};
         in_ex1 = {15'h7fff, ~j2_b[3]};
     end
+    // the light-gun games' ports (Seta2.sv): button 1 the trigger, button 2 the pump
+    wire        gun_game = (cfg_map == 3'd7);
+    wire [15:0] sp_buttons, sp_trigger, sp_pump, sp_coin, sp_gun1, sp_gun2;
+    s2_samports u_samports (
+        .layout(cfg[33][1:0]), .start1(start1), .start2(start2), .coin1(coin1), .coin2(coin2), .svc(svc),
+        .trig({joy2[4], joy1[4]}), .pump({joy2[5], joy1[5]}), .gun1(gun1), .gun2(gun2),
+        .p_buttons(sp_buttons), .p_trigger(sp_trigger), .p_pump(sp_pump), .p_coin(sp_coin), .p_gun1(sp_gun1), .p_gun2(sp_gun2)
+    );
+    // the battery RAM file (Seta2.sv)
+    logic [12:0] nv_b_addr;
+    logic        nv_b_we, nv_written;
+    logic  [7:0] nv_b_din, nv_b_q;
+    s2_nvram #(.INDEX(8'd4)) u_nvram (
+        .clk(clk), .gun_game(gun_game), .rom_dl(rom_dl),
+        .ioctl_download(io_dl), .ioctl_upload(io_ul), .ioctl_wr(io_wr), .ioctl_index(io_index),
+        .ioctl_addr(io_addr), .ioctl_dout(io_dout), .ioctl_din(io_din), .nv_req(nv_req), .nv_dl(nv_dl),
+        .osd(osd), .autosave_off(1'b0), .save(nv_save),
+        .nv_b_addr(nv_b_addr), .nv_b_we(nv_b_we), .nv_b_din(nv_b_din), .nv_b_q(nv_b_q), .nv_written(nv_written)
+    );
     logic [5:0] mj_keys [10];
     always_comb begin
         for (int i = 0; i < 10; i++) mj_keys[i] = 6'h3f;
@@ -161,7 +192,9 @@ module tb_sys #(
         .v_total({cfg[17][0], cfg[16]}), .v_sync({cfg[19][0], cfg[18]}), .v_start({cfg[21][0], cfg[20]}), .v_height({cfg[23][0], cfg[22]}),
         .rdly(rdly), .tile_mask({cfg[26][2:0], cfg[25], cfg[24]}), .tile_count({cfg[30][3:0], cfg[29], cfg[28]}),
         .cache_inval(mc_rst_in),
-        .in_p1(in_p1), .in_p2(in_p2), .in_sys(in_sys), .in_dsw1(in_dsw1), .in_dsw2(in_dsw2), .in_ex0(in_ex0), .in_ex1(in_ex1),
+        .in_p1(gun_game ? sp_buttons : in_p1), .in_p2(gun_game ? sp_trigger : in_p2), .in_sys(gun_game ? sp_coin : in_sys),
+        .in_dsw1(in_dsw1), .in_dsw2(in_dsw2), .in_ex0(gun_game ? sp_gun1 : in_ex0), .in_ex1(gun_game ? sp_gun2 : in_ex1), .in_ex2(sp_pump),
+        .nv_b_addr(nv_b_addr), .nv_b_we(nv_b_we), .nv_b_din(nv_b_din), .nv_b_q(nv_b_q), .nv_written(nv_written),
         .mj_keys(mj_keys),
         .ee_init_we(ee_we), .ee_init_addr(ee_wa), .ee_init_data(ee_wd),
         .gf_req(gf_req), .gf_addr(gf_addr), .gf_ready(gf_ready), .gf_valid(gf_valid), .gf_data(gf_data),

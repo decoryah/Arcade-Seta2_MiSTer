@@ -14,6 +14,11 @@ set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_render.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_video.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_core.sv
 
+# the light-gun games: the guns (mouse, stick, d-pad; the crosshair) and the board's ports
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_guns.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_samports.sv
+set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_nvram.sv
+
 # MiSTer platform layer: the SDRAM, the DDR3, the loader
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_sdram.sv
 set_global_assignment -name SYSTEMVERILOG_FILE rtl/s2_mem.sv

@@ -8,6 +8,8 @@
 --   SCHEDULE=play|none     scripted inputs: coin / start / random joystick and buttons (default none)
 --   SEED=<n>, COIN_FRAME=<n>, START_FRAME=<n>, PLAY_FRAME=<n>   (defaults 12345, 200, 260, 330)
 --   PRESS="<frame>,<what>;..."  single presses (below), with or without --play
+--   NVUSE=1                the light-gun games: nvuse.txt in DUMPDIR, the battery RAM's (0x300000-0x30FFFF) writes per 1 KB
+--                          block, with the frames of the first and the last
 --   EVLOG=<file>           log of the events the hardware model needs: video register writes, TMP68301 register writes,
 --                          with frame, screen line and dot ("frame vpos hpos addr data mask")
 --
@@ -162,6 +164,39 @@ for item in string.gmatch(os.getenv("PRESS") or "", "[^;]+") do
 end
 local function setv(fld, on) if fld then fld:set_value(on and 1 or 0) end end
 
+-- INPUTS=<file>: the machine bench's inputs file (sim/sys +inputs: lines "frame joy1 joy2 [gun1 gun2]", hex, each holding from that
+-- frame on; Seta2.sv's joystick bits 0 right, 1 left, 2 down, 3 up, 4..7 buttons 1..4, 8 start, 9 coin; the light guns' ports
+-- { Y, X }), in this machine's frames.  The guns are forced through read taps of 0x500000 / 0x580000 (the light-gun board's GUN1 /
+-- GUN2), installed only when the file has gun values.
+local INP, inp_has_gun = {}, false
+local inp_j1, inp_j2, inp_g1, inp_g2 = 0, 0, nil, nil
+if os.getenv("INPUTS") then
+  for line in io.lines(os.getenv("INPUTS")) do
+    local fr, a, b, c, d = line:match("^(%d+)%s+(%x+)%s+(%x+)%s*(%x*)%s*(%x*)")
+    if fr then
+      INP[tonumber(fr)] = { tonumber(a, 16), tonumber(b, 16), c ~= "" and tonumber(c, 16) or nil, d ~= "" and tonumber(d, 16) or nil }
+      if c ~= "" then inp_has_gun = true end
+    end
+  end
+  if inp_has_gun then
+    KEEP.gun1 = sp:install_read_tap(0x500000, 0x500001, "gun1", function(off, data, mask) if inp_g1 then return inp_g1 end return data end)
+    KEEP.gun2 = sp:install_read_tap(0x580000, 0x580001, "gun2", function(off, data, mask) if inp_g2 then return inp_g2 end return data end)
+  end
+end
+local nv_n, nv_first, nv_last = {}, {}, {}
+if os.getenv("NVUSE") then
+  KEEP.nvuse = sp:install_write_tap(0x300000, 0x30ffff, "nvuse", function(off, data, mask)
+    local b = (off - 0x300000) >> 10
+    nv_n[b] = (nv_n[b] or 0) + 1
+    if nv_first[b] == nil then nv_first[b] = f end
+    nv_last[b] = f
+  end)
+end
+local p2 = { find_field("P2 Right"), find_field("P2 Left"), find_field("P2 Down"), find_field("P2 Up"),
+             find_field("P2 Button 1"), find_field("P2 Button 2"), find_field("P2 Button 3"), find_field("P2 Button 4"),
+             find_field("2 Players Start"), find_field("Coin 2") }
+local p1 = { rt, lf, dn, up, btn[1], btn[2], btn[3], btn[4], start, coin }
+
 KEEP.notif = emu.add_machine_frame_notifier(function()
   f = absframe()
   if pending then
@@ -186,10 +221,25 @@ KEEP.notif = emu.add_machine_frame_notifier(function()
     setv(coin, h.C); setv(start, h.S); setv(up, h.U); setv(dn, h.D); setv(lf, h.L); setv(rt, h.R)
     for k = 1, 4 do setv(btn[k], h[tostring(k)]) end
   end
+  if os.getenv("INPUTS") then
+    local e = INP[f]
+    if e then
+      inp_j1, inp_j2 = e[1], e[2]
+      if e[3] then inp_g1, inp_g2 = e[3], e[4] end
+    end
+    for k = 1, 10 do setv(p1[k], (inp_j1 >> (k - 1)) & 1 == 1); setv(p2[k], (inp_j2 >> (k - 1)) & 1 == 1) end
+  end
   if FRAMES[f] then dump() end
   if f >= LAST + 1 and not pending then
     if evlog then evlog:close() end
     if wlog then wlog:close() end
+    if os.getenv("NVUSE") then
+      local o = io.open(DIR .. "/nvuse.txt", "w")
+      for b = 0, 63 do
+        if nv_n[b] then o:write(string.format("%06x %8d writes, frames %d-%d\n", 0x300000 + b * 1024, nv_n[b], nv_first[b], nv_last[b])) end
+      end
+      o:close()
+    end
     mach:exit()
   end
 end)

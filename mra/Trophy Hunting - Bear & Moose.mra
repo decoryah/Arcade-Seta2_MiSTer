@@ -1,0 +1,66 @@
+<misterromdescription>
+    <rotation>horizontal</rotation>
+    <name>Trophy Hunting - Bear &amp; Moose V1.00</name>
+    <setname>trophyh</setname>
+    <mameversion>0289</mameversion>
+    <year>2002</year>
+    <manufacturer>Sammy USA Corporation</manufacturer>
+    <players>2</players>
+    <joystick>0</joystick>
+    <rbf>seta2pen</rbf>
+    <platform>Seta</platform>
+
+    <!--
+      Image for the seta2 core (rtl/s2_mem.sv, tools/seta2_image.py):
+
+        0x0000000  header: configuration bytes (0x00..0x3F), 93C46 image (0x100..0x17F)
+        0x0100000  TMP68301 program (68000 byte order; gundamex 0x500000-0x57FFFF at +0x200000)
+        0x0500000  X1-010 samples
+        0x0900000  graphics ROM (MAME's "video" region as it is)
+
+      Made by tools/make_mra.py from MAME 0.289 (src/mame/seta/seta2.cpp); expects the MAME 0.289 merged romset or
+      the split sets: parts are found by name and CRC.
+
+      DIP switches (ioctl index 254): byte 0 is DSW1 (MAME's DSW1 port, bits 7:0), byte 1 DSW2, byte 2 board
+      jumpers; a 1 is "off".  MAME's default is FFFFFF.
+    -->
+    <switches default="FF,FF,FF" base="16">
+        <dip bits="0,1,2,3" name="Coin A" ids="Free Play,1 Coin 6 Credits  1 Credit Start &amp; Continue,1 Coin 5 Credits  1 Credit Start &amp; Continue,1 Coin 4 Credits  1 Credit Start &amp; Continue,1 Coin 3 Credits  1 Credit Start &amp; Continue,1 Coin 2 Credits  1 Credit Start &amp; Continue,4 Coins Start  1 Coin Continue,4 Coins Start  2 Coins Continue,4 Coins Start  3 Coins Continue,4 Coins Start  4 Coins Continue,3 Coins Start  1 Coin Continue,3 Coins Start  2 Coins Continue,3 Coins Start  3 Coins Continue,2 Coins Start  1 Coin Continue,2 Coins Start  2 Coins Continue,1 Coin Start  1 Coin Continue"/>
+        <dip bits="4" name="Unused (SW1:5)" ids="On,Off"/>
+        <dip bits="5" name="Unused (SW1:6)" ids="On,Off"/>
+        <dip bits="6" name="Unused (SW1:7)" ids="On,Off"/>
+        <dip bits="7" name="Service Mode" ids="On,Off"/>
+        <dip bits="8" name="Vert. Flip Screen" ids="On,Off"/>
+        <dip bits="9" name="Horiz. Flip Screen" ids="On,Off"/>
+        <dip bits="10" name="Demo Sounds" ids="Off,On"/>
+        <dip bits="11,12" name="Difficulty" ids="Hardest,Hard,Easy,Normal"/>
+        <dip bits="13" name="Blood Color" ids="Yellow,Red"/>
+        <dip bits="14" name="Lives" ids="3,2"/>
+        <dip bits="15" name="Gun Type" ids="Hand Gun,Pump Action"/>
+    </switches>
+
+    <rom index="0" zip="trophyh.zip" md5="4324bf420e355f30f87b402f6f9e97e6" address="0x30000000">
+        <!-- header: configuration (tools/seta2_image.py) -->
+        <part>53 32 07 00 AB AA 12 00 BE 01 23 00 60 00 40 01 06 01 02 00 0F 00 F0 00 FF FF 07 00 00 00 08 00 1F 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <part repeat="0x3">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <part repeat="0x3ffc">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- maincpu: the TMP68301 program (68000 byte order) -->
+        <interleave output="16">
+            <part name="as_1106_e01.u06" crc="b4950882" offset="0x0" length="0x100000" map="01"/>
+            <part name="as_1107_e01.u07" crc="19ee67cb" offset="0x0" length="0x100000" map="10"/>
+        </interleave>
+        <part repeat="0x8000">00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</part>
+        <!-- x1snd: the X1-010 samples -->
+        <part name="as1105m01.u18" crc="633d0df8" offset="0x0" length="0x400000"/>
+        <!-- video: the graphics ROM, 8 bytes per row of a tile (MAME's region as it is) -->
+        <interleave output="64">
+            <part name="as1101m01.u38" crc="855ed675" offset="0x0" length="0x800000" map="00000021"/>
+            <part name="as1102m01.u39" crc="d186d271" offset="0x0" length="0x800000" map="00002100"/>
+            <part name="as1103m01.u40" crc="adf8a54e" offset="0x0" length="0x800000" map="00210000"/>
+            <part name="as1104m01.u41" crc="387882e9" offset="0x0" length="0x800000" map="21000000"/>
+        </interleave>
+    </rom>
+    <nvram index="4" size="8192"/>
+
+    <buttons names="Trigger,Pump,-,-,Start,Coin" default="A,B,Start,Select"/>
+</misterromdescription>

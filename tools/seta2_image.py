@@ -16,7 +16,7 @@ Header bytes (little-endian 16-bit values):
   0 'S'  1 '2'  2 memory map  3 flags: bit 0 CPU / X1-010 at 32.53047 MHz / 2, bit 1 93C46 on the parallel port, bit 2 myangel
   inputs, bit 3 mahjong inputs, bit 4 pzlbowl SYSTEM port, bit 5 gundamex SYSTEM / IN0 / IN1, bit 6 no button 3
   4..6 dot clock increment (24 bits)   8 h_total  10 h_sync  12 h_start  14 h_width  16 v_total  18 v_sync  20 v_start  22 v_height
-  24..26 tile_mask  28..30 tile_count  32 sample pages - 1 (x1snd size / 128 KB - 1)
+  24..26 tile_mask  28..30 tile_count  32 sample pages - 1 (x1snd size / 128 KB - 1)  33 the light guns (seta2_cfg.GUNS)
 """
 import os
 import struct
@@ -55,6 +55,7 @@ def header(s, regions):
     h[24:28] = struct.pack('<I', vc['tile_mask'])
     h[28:32] = struct.pack('<I', vc['tile_count'])
     h[32] = len(regions['x1snd']) // 0x20000 - 1
+    h[33] = seta2_cfg.GUNS.get(s, 0)
     if 'eeprom' in regions:
         e = regions['eeprom']
         h[0x100:0x100 + len(e)] = e

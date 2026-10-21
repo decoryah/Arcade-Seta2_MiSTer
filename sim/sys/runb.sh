@@ -4,7 +4,7 @@
 S=$1; N=$2; O=$3; shift 3
 case "$S" in
   grdians*)        B=grd; VF="-GCLK_HZ=93750000 -GDOT_DIV=15" ;;
-  penbros|ablast)  B=pen; VF="-GCLK_HZ=91000000 -GDOT_DIV=13" ;;
+  penbros|ablast|deerhunt*|turkhunt|wschamp*|trophyh*)  B=pen; VF="-GCLK_HZ=91000000 -GDOT_DIV=13" ;;
   *)               B=main; VF="-GCLK_HZ=89458793 -GDOT_DIV=11" ;;
 esac
 W="${WORK:-$(cd "$(dirname "$0")/../../.." && pwd)/work}"   # the scratch folder next to the repository (WORK= elsewhere)

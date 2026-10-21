@@ -8,7 +8,8 @@
 // SDRAM model directly (+fastload: the real fast-load path, the header and graphics copied by s2_mem from the DDR3; +stream: the
 // whole image through the byte port, as an ordinary download; both check what landed where).
 // Frames are counted at the start of each vertical blank; frame N's picture is the one shown before vblank N.
-// +inputs: lines "frame joy1 joy2" (hex, Seta2.sv's joystick bits), each holding from that frame on.
+// +inputs: lines "frame joy1 joy2 [gun1 gun2]" (hex: Seta2.sv's joystick bits; the light guns' ports { Y, X } in MAME's units, as
+// rtl/s2_guns.sv makes them), each holding from that frame on.  The guns start at MAME's defaults, 0x8080.
 #include "Vtb_sys.h"
 #include "Vtb_sys___024root.h"
 #include "verilated.h"
@@ -96,6 +97,78 @@ static void wav_header(FILE *f, uint32_t n, uint32_t rate) {
     fwrite("data", 1, 4, f); fwrite(&bytes, 4, 1, f);
 }
 
+// ------------------------------------------------------------------ the light-gun games' battery RAM file (rtl/s2_nvram.sv)
+// hps_io's file port as Main_MiSTer drives it: a download (index 4) a byte at a time, an upload reading ioctl_din per address
+static void nv_download(const std::vector<uint8_t> &d, int index = 4, size_t base = 0) {
+    top->io_index = index; top->io_dl = 1; tick();
+    for (size_t a = 0; a < d.size(); a++) {
+        top->io_addr = base + a; top->io_dout = d[a]; top->io_wr = 1; tick();
+        top->io_wr = 0; tick(); tick();
+    }
+    top->io_dl = 0; tick(); tick();
+}
+static std::vector<uint8_t> nv_upload() {
+    std::vector<uint8_t> d(8192);
+    top->io_index = 4; top->io_ul = 1; tick();
+    for (size_t a = 0; a < d.size(); a++) { top->io_addr = a; tick(); tick(); tick(); d[a] = top->io_din; }
+    top->io_ul = 0; tick(); tick();
+    return d;
+}
+static size_t ndiff(const std::vector<uint8_t> &a, const std::vector<uint8_t> &b) {
+    size_t n = 0;
+    for (size_t i = 0; i < a.size(); i++) if (a[i] != (i < b.size() ? b[i] : 0)) n++;
+    return n;
+}
+// before the machine starts: the ROM load clears the RAM; a file that comes lands in it whole and in order, nothing past 8 KB
+// nor with another index does; the machine is held in reset while it comes; then +nvload's file (else the cleared RAM)
+static void nv_check(const std::string &load) {
+    for (int i = 0; i < 8300; i++) tick();                                   // the clear (8192 clocks from the ROM load's start)
+    std::vector<uint8_t> zero(8192, 0), pat(8192), junk(8192, 0x5a);
+    for (size_t a = 0; a < pat.size(); a++) pat[a] = (uint8_t)(a * 7 + 3 + (a >> 8));
+    size_t e0 = ndiff(nv_upload(), zero);
+    top->io_index = 4; top->io_dl = 1; tick(); tick(); tick();
+    int held = top->mc_rst;
+    top->io_dl = 0; tick();
+    nv_download(pat);
+    nv_download(std::vector<uint8_t>(16, 0xa5), 4, 8192);                      // past 8 KB: dropped
+    nv_download(junk, 5);                                                    // another file: not this RAM
+    size_t e1 = ndiff(nv_upload(), pat);
+    top->rom_dl = 1; for (int i = 0; i < 64; i++) tick();                    // another ROM load
+    top->rom_dl = 0; for (int i = 0; i < 8300; i++) tick();
+    size_t e2 = ndiff(nv_upload(), zero);
+    printf("nvram path check: cleared %zu, file %zu, after a ROM load %zu bytes wrong; reset held while the file comes: %s\n",
+           e0, e1, e2, held ? "yes" : "NO");
+    if (!load.empty()) {
+        auto f = slurp(load.c_str());
+        f.resize(8192, 0);
+        nv_download(f);
+        printf("nvram file %s: %zu bytes wrong after loading\n", load.c_str(), ndiff(nv_upload(), f));
+    }
+    fflush(stdout);
+}
+// after the run: the OSD's opening asks for the save when the game has changed the RAM, the save (+nvdump) takes it, opening the OSD
+// again two frames later asks nothing (the game goes on rewriting its RAM with the same values), Save NVRAM asks always
+static void nv_end(const std::string &dump) {
+    auto req = [](int &seen) { seen = 0; for (int i = 0; i < 8; i++) { tick(); seen |= top->nv_req; } };
+    int r1, r2, r3;
+    top->osd = 1; req(r1);
+    auto d = nv_upload();
+    top->osd = 0;
+    for (int vb = 0, pv = top->vblank; vb < 2; tick()) { if (top->vblank && !pv) vb++; pv = top->vblank; }
+    top->osd = 1; req(r2); top->osd = 0;
+    top->nv_save = 1; req(r3); top->nv_save = 0; tick();
+    size_t used = 0;
+    for (size_t i = 0; i < d.size(); i++) if (d[i]) used = i + 1;
+    printf("nvram: save asked on OSD open %d (the game changed it), again 2 frames after the save %d, on Save NVRAM %d; written up to byte %zu\n",
+           r1, r2, r3, used);
+    if (!dump.empty()) {
+        FILE *f = fopen(dump.c_str(), "wb");
+        fwrite(d.data(), 1, d.size(), f);
+        fclose(f);
+    }
+    fflush(stdout);
+}
+
 int main(int argc, char **argv) {
     Verilated::commandArgs(argc, argv);
     if (argc < 4) { fprintf(stderr, "usage: %s <image> <frames> <out-prefix> [+...]\n", argv[0]); return 2; }
@@ -105,7 +178,8 @@ int main(int argc, char **argv) {
     int dsw1 = 0xff, dsw2 = 0xff, jumpers = 0xff, every = 0, rdly = 144;
     bool wav = false, fastload = false, stream = false;
     std::set<int> dump;
-    std::map<int, std::pair<int, int>> script;
+    std::map<int, std::pair<int, int>> script, guns;
+    std::string nvload, nvdump;
     for (int i = 4; i < argc; i++) {
         std::string a = argv[i];
         if (!a.compare(0, 6, "+dsw1=")) dsw1 = strtol(a.c_str() + 6, nullptr, 16);
@@ -118,6 +192,8 @@ int main(int argc, char **argv) {
         else if (!a.compare(0, 5, "+gap=")) gap_pct = atoi(a.c_str() + 5);
         else if (!a.compare(0, 6, "+rdly=")) rdly = atoi(a.c_str() + 6);
         else if (a == "+wav") wav = true;
+        else if (!a.compare(0, 8, "+nvload=")) nvload = a.substr(8);
+        else if (!a.compare(0, 8, "+nvdump=")) nvdump = a.substr(8);
         else if (a == "+fastload") fastload = true;
         else if (a == "+stream") stream = true;
         else if (!a.compare(0, 6, "+dump=")) {
@@ -127,8 +203,12 @@ int main(int argc, char **argv) {
         } else if (!a.compare(0, 8, "+inputs=")) {
             FILE *f = fopen(a.c_str() + 8, "r");
             if (!f) { fprintf(stderr, "no inputs file\n"); return 2; }
-            int fr; unsigned j1, j2;
-            while (fscanf(f, "%d %x %x", &fr, &j1, &j2) == 3) script[fr] = {(int)j1, (int)j2};
+            char line[256];
+            while (fgets(line, sizeof line, f)) {
+                int fr; unsigned j1, j2, g1 = 0x8080, g2 = 0x8080;
+                int n = sscanf(line, "%d %x %x %x %x", &fr, &j1, &j2, &g1, &g2);
+                if (n >= 3) { script[fr] = {(int)j1, (int)j2}; if (n == 5) guns[fr] = {(int)g1, (int)g2}; }
+            }
             fclose(f);
         }
     }
@@ -139,12 +219,15 @@ int main(int argc, char **argv) {
 
     top = new Vtb_sys;
     top->dsw1 = dsw1; top->dsw2 = dsw2; top->jumpers = jumpers; top->rdly = rdly;
-    top->joy1 = 0; top->joy2 = 0; top->pause = 0;
+    top->joy1 = 0; top->joy2 = 0; top->pause = 0; top->gun1 = 0x8080; top->gun2 = 0x8080;
     top->mc_rst_in = 1; top->sd_init = 1;
+    top->rom_dl = 0; top->io_dl = 0; top->io_ul = 0; top->io_wr = 0; top->io_index = 0; top->io_addr = 0; top->io_dout = 0;
+    top->osd = 0; top->nv_save = 0;
     for (int i = 0; i < 8; i++) tick();
     top->sd_init = 0;
     while (!top->sd_ready) tick();
 
+    top->rom_dl = 1;
     if (fastload) {
         // the real path: the header and the graphics come from the DDR3
         top->fl_len = img.size(); top->fl_go = 1; tick(); top->fl_go = 0;
@@ -204,6 +287,9 @@ int main(int argc, char **argv) {
         }
     }
     for (int i = 0; i < 16; i++) tick();
+    top->rom_dl = 0;
+    const bool gun_game = (img[2] & 7) == 7;
+    if (gun_game) nv_check(nvload);
     top->mc_rst_in = 0;
 
     const int W = img[14] | (img[15] << 8), H = img[22] | (img[23] << 8);
@@ -217,6 +303,8 @@ int main(int argc, char **argv) {
     while (frame < nframes) {
         auto it = script.find(frame);
         if (it != script.end()) { top->joy1 = it->second.first; top->joy2 = it->second.second; }
+        auto ig = guns.find(frame);
+        if (ig != guns.end()) { top->gun1 = ig->second.first; top->gun2 = ig->second.second; }
         if (top->ce_pix) {
             int hb = top->hblank, vb = top->vblank;
             if (prev_vb && !vb) y = -1;
@@ -249,6 +337,7 @@ int main(int argc, char **argv) {
         fwrite(snd.data(), 2, snd.size(), f);
         fclose(f);
     }
+    if (gun_game) nv_end(nvdump);
     int sderr = top->rootp->tb_sys__DOT__u_chip__DOT__errors;
     printf("done: %d frames, %llu cycles, overruns %d, sdram errors %d\n", frame, (unsigned long long)cyc, overruns, sderr);
     delete top;

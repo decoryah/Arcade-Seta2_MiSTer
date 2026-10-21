@@ -51,6 +51,7 @@ assign BUTTONS   = 0;
 
 wire [127:0] status;
 reg          grd_game = 1'b0, gx_game = 1'b0;      // Guardians (any board) / Gundam EX is loaded: their CPU speed options (OSD)
+reg          gun_game = 1'b0;                      // a light-gun game (Sammy's board, map 7) is loaded: its gun options (OSD)
 wire   [1:0] buttons;
 wire         forced_scandoubler;
 wire         direct_video;
@@ -84,6 +85,13 @@ localparam CONF_STR = {
 	"H1P1O[27:21],CRT H-Position,0,+1,+2,+3,+4,+5,+6,+7,+8,+9,+10,+11,+12,+13,+14,+15,+16,+17,+18,+19,+20,+21,+22,+23,+24,+25,+26,+27,+28,+29,+30,+31,+32,+33,+34,+35,+36,+37,+38,+39,+40,+41,+42,+43,+44,+45,+46,+47,+48,-48,-47,-46,-45,-44,-43,-42,-41,-40,-39,-38,-37,-36,-35,-34,-33,-32,-31,-30,-29,-28,-27,-26,-25,-24,-23,-22,-21,-20,-19,-18,-17,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1;",
 	"H1P1O[40:36],CRT V-Shift,0,+1,+2,+3,+4,+5,+6,+7,+8,+9,+10,+11,+12,+13,+14,+15,-16,-15,-14,-13,-12,-11,-10,-9,-8,-7,-6,-5,-4,-3,-2,-1;",
 	"-;",
+	"H4O[46:45],Crosshair,Off,P1,P2,P1+P2;",
+	"H4O[48:47],P1 stick,Auto,Aim,D-pad;",
+	"H4O[50:49],P2 stick,Auto,Aim,D-pad;",
+	"H4O[52:51],Mouse aims,P1,P2,Off;",
+	"H4O[53],Autosave NVRAM,On,Off;",
+	"H4T[54],Save NVRAM;",
+	"H4-;",
 	"DIP;",
 	"-;",
 	"O[9:8],Volume,Normal,-6 dB,-12 dB,-18 dB;",
@@ -138,10 +146,16 @@ wire         ioctl_wr;
 wire  [15:0] ioctl_index;
 wire  [26:0] ioctl_addr;
 wire   [7:0] ioctl_dout;
+wire         ioctl_upload;
+wire   [7:0] ioctl_din;
+localparam [7:0] NV_INDEX = 8'd4;     // the light-gun games' battery RAM file: the MRA's <nvram index="4" size="8192"/> (below)
+wire         nv_req;
 wire         ioctl_wait;
 
 wire  [31:0] joystick_0, joystick_1;
+wire  [15:0] joystick_l_analog_0, joystick_l_analog_1;
 wire  [10:0] ps2_key;
+wire  [24:0] ps2_mouse;
 
 hps_io #(.CONF_STR(CONF_STR)) hps_io
 (
@@ -151,7 +165,7 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 
 	.buttons(buttons),
 	.status(status),
-	.status_menumask({12'd0, ~gx_game, ~grd_game, ~status[14], direct_video}),
+	.status_menumask({11'd0, ~gun_game, ~gx_game, ~grd_game, ~status[14], direct_video}),
 	.forced_scandoubler(forced_scandoubler),
 	.direct_video(direct_video),
 	.gamma_bus(gamma_bus),
@@ -162,10 +176,18 @@ hps_io #(.CONF_STR(CONF_STR)) hps_io
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
 	.ioctl_wait(ioctl_wait),
+	.ioctl_upload(ioctl_upload),
+	.ioctl_upload_req(nv_req),
+	.ioctl_upload_index(NV_INDEX),
+	.ioctl_din(ioctl_din),
+	.ioctl_rd(),
 
 	.joystick_0(joystick_0),
 	.joystick_1(joystick_1),
-	.ps2_key(ps2_key)
+	.joystick_l_analog_0(joystick_l_analog_0),
+	.joystick_l_analog_1(joystick_l_analog_1),
+	.ps2_key(ps2_key),
+	.ps2_mouse(ps2_mouse)
 );
 
 ///////////////////////   DIP SWITCHES (from the MRA)   ///////////////////////
@@ -215,6 +237,7 @@ reg   [1:0] turbo = 2'd0;
 always @(posedge clk_sys) begin
 	grd_game <= hdr_ok && (cfg_map == 3'd0);
 	gx_game  <= hdr_ok && (cfg_map == 3'd1);
+	gun_game <= hdr_ok && (cfg_map == 3'd7);
 	turbo    <= grd_game ? {status[42], 1'b0} : gx_game ? ((status[44:43] == 2'd3) ? 2'd2 : status[44:43]) : 2'd0;
 end
 wire  [9:0] h_total    = hdr_ok ? {cfg[9][1:0],  cfg[8]}  : D_HTOT;
@@ -320,6 +343,19 @@ always @* begin
 	in_ex1 = {15'h7fff, ~j2_b[3]};
 end
 
+// The light-gun games (Sammy's board, map 7): the guns -- the left stick, the d-pad or the mouse aims, button 1 is the trigger,
+// button 2 the pump (rtl/s2_guns.sv) -- and the board's ports (rtl/s2_samports.sv), which replace the joystick ports above
+wire [15:0] gun1, gun2;
+wire  [1:0] gun_trig, gun_pump;
+wire [23:0] rgb_core, rgb_gun;
+wire [15:0] sp_buttons, sp_trigger, sp_pump, sp_coin, sp_gun1, sp_gun2;
+s2_samports u_samports
+(
+	.layout(cfg[33][1:0]), .start1(start1), .start2(start2), .coin1(coin1), .coin2(coin2), .svc(svc),
+	.trig(gun_trig), .pump(gun_pump), .gun1(gun1), .gun2(gun2),
+	.p_buttons(sp_buttons), .p_trigger(sp_trigger), .p_pump(sp_pump), .p_coin(sp_coin), .p_gun1(sp_gun1), .p_gun2(sp_gun2)
+);
+
 // mj4simai: mahjong_matrix_2p_bet_wup (+ _ff), KEY0..4 player 1, KEY5..9 player 2 (the keyboard plays player 1)
 wire [5:0] mj_keys[10];
 assign mj_keys[0] = ~{start1, k_kan, k_mj[12], k_mj[8], k_mj[4], k_mj[0]};
@@ -409,7 +445,21 @@ wire reset_sw = RESET | status[0] | buttons[1];
 wire loading  = rom_dl | fast_dl | dl_busy | fl_busy | ~mem_ready;
 wire ee_busy;
 reg  mc_rst = 1'b1;
-always @(posedge clk_sys) mc_rst <= reset_sw | loading | ee_busy | ~pll_locked;
+wire        nv_dl;
+always @(posedge clk_sys) mc_rst <= reset_sw | loading | nv_dl | ee_busy | ~pll_locked;
+
+// the light-gun games' battery RAM to and from the SD card (rtl/s2_nvram.sv)
+wire [12:0] nv_b_addr;
+wire        nv_b_we;
+wire  [7:0] nv_b_din, nv_b_q;
+wire        nv_written;
+s2_nvram #(.INDEX(NV_INDEX)) u_nvram (
+	.clk(clk_sys), .gun_game(gun_game), .rom_dl(rom_dl),
+	.ioctl_download(ioctl_download), .ioctl_upload(ioctl_upload), .ioctl_wr(ioctl_wr), .ioctl_index(ioctl_index[7:0]),
+	.ioctl_addr(ioctl_addr), .ioctl_dout(ioctl_dout), .ioctl_din(ioctl_din), .nv_req(nv_req), .nv_dl(nv_dl),
+	.osd(OSD_STATUS), .autosave_off(status[53]), .save(status[54]),
+	.nv_b_addr(nv_b_addr), .nv_b_we(nv_b_we), .nv_b_din(nv_b_din), .nv_b_q(nv_b_q), .nv_written(nv_written)
+);
 
 // the EEPROM image from the header into the 93C46 (64 big-endian words): copied once the download has finished, the machine held
 // in reset meanwhile; a plain reset keeps what the game has written since
@@ -445,7 +495,8 @@ s2_core #(.CLK_HZ(CLK_HZ), .DOT_DIV(DOT_DIV)) u_core
 	.dot_inc(dot_inc), .h_total(h_total), .h_sync(h_sync), .h_start(h_start), .h_width(h_width),
 	.v_total(v_total), .v_sync(v_sync), .v_start(v_start), .v_height(v_height), .rdly(10'd144),
 	.tile_mask(tile_mask), .tile_count(tile_count), .cache_inval(rom_dl | fast_dl | mem_init),
-	.in_p1(in_p1), .in_p2(in_p2), .in_sys(in_sys), .in_dsw1(in_dsw1), .in_dsw2(in_dsw2), .in_ex0(in_ex0), .in_ex1(in_ex1),
+	.in_p1(gun_game ? sp_buttons : in_p1), .in_p2(gun_game ? sp_trigger : in_p2), .in_sys(gun_game ? sp_coin : in_sys), .in_dsw1(in_dsw1), .in_dsw2(in_dsw2), .in_ex0(gun_game ? sp_gun1 : in_ex0), .in_ex1(gun_game ? sp_gun2 : in_ex1), .in_ex2(sp_pump),
+	.nv_b_addr(nv_b_addr), .nv_b_we(nv_b_we), .nv_b_din(nv_b_din), .nv_b_q(nv_b_q), .nv_written(nv_written),
 	.mj_keys(mj_keys),
 	.ee_init_we(ee_we), .ee_init_addr(ee_wa), .ee_init_data(ee_wd),
 	.gf_req(gf_req), .gf_addr(gf_addr), .gf_ready(gf_ready), .gf_valid(gf_valid), .gf_data(gf_data),
@@ -466,7 +517,16 @@ assign AUDIO_R = aud;
 
 ///////////////////////   VIDEO   ///////////////////////
 
-wire [23:0] rgb_in = (mc_rst || !hdr_ok) ? 24'd0 : {r, g, b};
+s2_guns u_guns
+(
+	.clk(clk_sys), .rst(mc_rst | ~gun_game),
+	.joy0(joystick_0), .joy1(joystick_1), .ana0(joystick_l_analog_0), .ana1(joystick_l_analog_1), .mouse(ps2_mouse),
+	.mode0(status[48:47]), .mode1(status[50:49]), .ms_who(status[52:51]),
+	.gun1(gun1), .gun2(gun2), .trig(gun_trig), .pump(gun_pump),
+	.show(gun_game ? status[46:45] : 2'b00), .ce(ce_pix), .hblank(hblank), .vblank(vblank), .rgb_in(rgb_core), .rgb_out(rgb_gun)
+);
+assign      rgb_core = (mc_rst || !hdr_ok) ? 24'd0 : {r, g, b};
+wire [23:0] rgb_in = rgb_gun;                     // the light guns' crosshairs drawn in (OSD "Crosshair"), else the picture as it is
 wire        vga_de_mix;
 
 // CRT Adjust (OSD page of the same name): H-Size, H-Position and V-Shift of the picture on a 15 kHz analog output, through rmonic79's line buffer

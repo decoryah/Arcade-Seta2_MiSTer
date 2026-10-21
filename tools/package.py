@@ -4,13 +4,15 @@
   _Arcade/<title>.mra                              the MRAs, with their _alternatives/ folders   (mra/**/*.mra)
   _Arcade/cores/seta2_<YYYYMMDD>.rbf               the three core files, one per board dot clock (releases/):
   _Arcade/cores/seta2grd_<YYYYMMDD>.rbf              seta2 (Gundam EX, Mahjong Yonshimai, My Angel 1 / 2, Puzzle De Bowling),
-  _Arcade/cores/seta2pen_<YYYYMMDD>.rbf              seta2grd (Guardians), seta2pen (Penguin Brothers, A-Blast); the MRAs pick
+  _Arcade/cores/seta2pen_<YYYYMMDD>.rbf              seta2grd (Guardians), seta2pen (Penguin Brothers, A-Blast, the light-gun
+                                                     games); the MRAs pick
 
   python tools/package.py [YYYYMMDD]        (default: the newest date that all three RBFs in releases/ have)
 
 Writes dist/Seta2_MiSTer_<YYYYMMDD>.zip (dist/ is not in the repository: attach the zip to the GitHub release).  Unzip it over
 the root of the SD card.  No ROMs are in it: the MAME 0.289 romsets (grdians.zip, gundamex.zip, mj4simai.zip, myangel.zip,
-myangel2.zip, pzlbowl.zip, penbros.zip, and the clones' zips with a split set) go to /media/fat/games/mame/.
+myangel2.zip, pzlbowl.zip, penbros.zip, deerhunt.zip, turkhunt.zip, wschamp.zip, trophyh.zip, and the clones' zips with a split
+set) go to /media/fat/games/mame/.
 """
 import glob
 import os
